@@ -103,5 +103,11 @@ public class Tile : MonoBehaviour
     {
         return "Tile @ " + gridPoint.colRow.ToString() + ": " + resource.ToString() + " - " + number;
     }
+
+    // Get the chance this tile will be rolled by dice
+    public float GetValue()
+    {
+
+    }
 }
 

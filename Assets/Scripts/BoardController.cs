@@ -7,7 +7,7 @@ public class BoardController : MonoBehaviour
     [SerializeField] private GameObject tilePrefab = null;
     [SerializeField] private GameObject board = null;
     public Dictionary<Vector2Int, GridPoint> gridPoints = new Dictionary<Vector2Int, GridPoint>();
-    private List<Tile> tiles = new List<Tile>();
+    [SerializeField] private List<Tile> tiles = new List<Tile>();
 
     int diagonal = 5;
     public bool useStandard = false;
@@ -106,7 +106,7 @@ public class BoardController : MonoBehaviour
                 while (CheckHighChanceNeighbours())
                 {
                     indexes = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18 };
-                    Debug.Log("Generating new board, while the old one wasn't fair!");
+                    //Debug.Log("Generating new board, while the old one wasn't fair!");
                     // Go trough all tiles
                     for (int i = 0; i < tiles.Count; i++)
                     {
@@ -174,7 +174,7 @@ public class BoardController : MonoBehaviour
 
     void CreateGridPoints()
     {
-        gridPoints.Clear();
+        if (gridPoints.Count > 0) { gridPoints.Clear(); }
         // Als x = Round(diagonal / 2), dan moet y tot diagonal gaan
         // Als x = 0, dan moet y tot 3 gaan
         // Als x = diagonal, dan moet y ook tot 3
@@ -201,7 +201,7 @@ public class BoardController : MonoBehaviour
                 CreateHexagonPoints(x, 5);
                 CreateHexagonPoints(x, 6);
             }
-        }       
+        }
     }
 
     void CreateHexagonPoints(int col, int row)
@@ -255,11 +255,12 @@ public class BoardController : MonoBehaviour
 
     void CreateTiles()
     {
+        tiles.Clear();
         foreach(GridPoint gp in gridPoints.Values)
         {
             if (gp.isMiddle)
             {
-                GameObject tileObject = Instantiate(tilePrefab, gp.position, tilePrefab.transform.rotation, GameObject.Find("Board").transform);
+                GameObject tileObject = Instantiate(tilePrefab, gp.position, tilePrefab.transform.rotation, board.transform);
                 tileObject.name = "Tile " + (tiles.Count + 1) + " @ " + gp.colRow.ToString();
                 Tile tile = tileObject.GetComponent<Tile>();
                 gp.SetTile(tile);

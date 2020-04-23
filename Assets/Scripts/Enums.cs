@@ -27,4 +27,9 @@ public static class Enums
         List<Action> actions = Enum.GetValues(typeof(Action)).Cast<Action>().ToList();
         return actions.IndexOf(action);
     }
+
+    public static List<Resource> GetResourcesAsList()
+    {
+        return Enum.GetValues(typeof(Resource)).Cast<Resource>().ToList();
+    }
 }

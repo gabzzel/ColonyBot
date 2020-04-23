@@ -6,24 +6,30 @@ public class GameController : MonoBehaviour
     public int numberOfPlayers = 3;
     private BoardController bc = null;
     private PlayerManager pm = null;
+    private UIController uic = null;
 
     private void Awake()
     {
         bc = GetComponent<BoardController>();
         pm = GetComponent<PlayerManager>();
+        uic = GameObject.FindGameObjectWithTag("UIController").GetComponent<UIController>();
     }
 
-    private void Start()
+    public void NewGame()
     {
+        Debug.Log("New game started!");
+        // 1. Create a new board
         bc.CreateFilledBoard();
+        // 2. Initialize players
         pm.Initialize(numberOfPlayers);
+        // 3. Initialize UI of the players
+        uic.Initialize(pm.players);
+    }
 
-        int diceResult = ThrowDice();
-        Debug.Log("We threw " + diceResult);
-        foreach(Tile t in bc.GetTilesByNumber(diceResult))
-        {
-            Debug.Log(t.ToString());
-        }
+    public void PerformDiceRoll()
+    {
+        int dice = ThrowDice();
+        uic.UpdateDiceRoll(dice);
     }
 
     /// <summary>
