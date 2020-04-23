@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static Enums;
 
 public class GridPoint
 {
@@ -8,6 +9,7 @@ public class GridPoint
     public Vector2Int colRow = Vector2Int.zero;
     public bool isMiddle = false;
     public List<GridPoint> connectedTo = new List<GridPoint>();
+    public Building building = null;
     private Tile tile = null;
 
     public GridPoint(Vector2 position, Vector2Int colRow)
@@ -70,6 +72,34 @@ public class GridPoint
             {
                 result.Add(neighbour.tile);
             }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Get the value of this gridpoint per resource
+    /// </summary>
+    /// <returns></returns>
+    public Dictionary<Resource, float> GetResourceValues()
+    {
+        Dictionary<Resource, float> values = new Dictionary<Resource, float>();
+        foreach(Resource res in GetResourcesAsList())
+        {
+            values.Add(res, 0);
+        }
+        foreach(Tile t in GetNeighbouringTiles())
+        {
+            values[t.resource] += t.GetValue();
+        }
+        return values;
+    }
+
+    public float GetValue()
+    {
+        float result = 0;
+        foreach(Tile t in GetNeighbouringTiles())
+        {
+            result += t.GetValue();
         }
         return result;
     }

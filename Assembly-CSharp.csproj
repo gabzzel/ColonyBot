@@ -64,6 +64,7 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\Bank.cs" />
     <Compile Include="Assets\Scripts\BoardController.cs" />
+    <Compile Include="Assets\Scripts\Building.cs" />
     <Compile Include="Assets\Scripts\Enums.cs" />
     <Compile Include="Assets\Scripts\GameController.cs" />
     <Compile Include="Assets\Scripts\GridPoint.cs" />

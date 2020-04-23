@@ -1,9 +1,12 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
+using static Enums;
 
 public class GameController : MonoBehaviour
 {
     public int pointsToWin = 12;
     public int numberOfPlayers = 3;
+    [SerializeField] private GameObject villagePrefab = null;
     private BoardController bc = null;
     private PlayerManager pm = null;
     private UIController uic = null;
@@ -24,12 +27,26 @@ public class GameController : MonoBehaviour
         pm.Initialize(numberOfPlayers);
         // 3. Initialize UI of the players
         uic.Initialize(pm.players);
+
+        InitialPlacements();
+    }
+
+    void InitialPlacements()
+    {
+        // Get a position from the players
+        for (int i = 0; i < pm.players.Count; i++)
+        {
+            GridPoint gp = pm.RequestBuildingPosition(bc.GetPossibleBuildingSites(i, true));
+            CreateVillage(gp);
+        }
     }
 
     public void PerformDiceRoll()
     {
         int dice = ThrowDice();
         uic.UpdateDiceRoll(dice);
+        GiveResourcesToPlayers(dice);
+        uic.UpdateAllPlayers(pm.players);
     }
 
     /// <summary>
@@ -43,4 +60,35 @@ public class GameController : MonoBehaviour
         return dice1 + dice2;
     }
 
+    void CreateVillage(GridPoint gp)
+    {
+        if(gp == null)
+        {
+            Debug.LogWarning("Cannot create village on null Gridpoint!");
+            return;
+        }
+        Player currentPlayer = pm.players[pm.playerInControl];
+        GameObject villageObject = Instantiate(villagePrefab, gp.position, Quaternion.identity, currentPlayer.transform);
+        Building b = villageObject.GetComponent<Building>();
+        b.Initialize(currentPlayer, gp);
+    }
+
+    void GiveResourcesToPlayers(int diceRoll)
+    {
+        List<Tile> relevantTiles = bc.GetTilesByNumber(diceRoll); // Get the tiles with this number
+        foreach(Tile t in relevantTiles)
+        {
+            List<GridPoint> neighbouringGridPoints = t.gridPoint.GetNeighbouringGridPoints(); // Get all tiles where there is possibly a building
+            foreach(GridPoint gp in neighbouringGridPoints)
+            {
+                if(gp.building != null)
+                {
+                    Building b = gp.building;
+                    int number = 1;
+                    if (b.city) { number = 2; }
+                    b.owner.AddToResource(t.resource, number);
+                }
+            }
+        }
+    }
 }

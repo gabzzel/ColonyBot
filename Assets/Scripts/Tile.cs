@@ -107,7 +107,8 @@ public class Tile : MonoBehaviour
     // Get the chance this tile will be rolled by dice
     public float GetValue()
     {
-
+        float value = (6 - Mathf.Abs(7 - number)) / 36;
+        return value;
     }
 }
 

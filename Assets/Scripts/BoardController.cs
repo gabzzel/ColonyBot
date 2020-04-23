@@ -281,6 +281,34 @@ public class BoardController : MonoBehaviour
         }
         return result;
     }
+
+    /// <summary>
+    /// Returns all possible places a player can build
+    /// </summary>
+    /// <param name="playerNumber"> The player whos turn it is. Set to -1 for free </param>
+    /// <returns> A list of all possible placement points</returns>
+    public List<GridPoint> GetPossibleBuildingSites(int playerNumber, bool freePlacement)
+    {
+        List<GridPoint> sites = new List<GridPoint>();
+
+        if(freePlacement)
+        {
+            foreach(GridPoint gp in gridPoints.Values)
+            {
+                // If the gridpoint is not a tile and there is not already a building on it...
+                if(!gp.isMiddle && gp.building == null)
+                {
+                    sites.Add(gp);
+                }
+            }
+        }
+        else
+        {
+            // For a later moment
+        }
+
+        return sites;
+    }
 }
 
 

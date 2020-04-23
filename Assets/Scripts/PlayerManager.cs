@@ -56,13 +56,24 @@ public class PlayerManager : MonoBehaviour
         return p;
     }
 
-    public Enums.Action RequestAction()
+    public Enums.Action RequestAction(List<Enums.Action> possibleActions)
     {
-        return players[playerInControl].RequestAction();
+        return players[playerInControl].RequestAction(possibleActions);
+    }
+
+    public GridPoint RequestBuildingPosition(List<GridPoint> possiblePositions)
+    {
+        return players[playerInControl].RequestBuildingPosition(possiblePositions);
     }
 
     public string GetCurrentPlayerName()
     {
         return players[0].name;
+    }
+
+    public void NextPlayer()
+    {
+        playerInControl++;
+        if(playerInControl >= players.Count) { playerInControl = 0; }
     }
 }

@@ -10,9 +10,27 @@ public class Player : MonoBehaviour
     public int points = 0;
     public Dictionary<Resource, int> resources = new Dictionary<Resource, int>();
 
-    public Action RequestAction()
+    public Action RequestAction(List<Action> possibleActions)
     {
-        return Action.Pass;
+        if (possibleActions.Contains(Action.Pass))
+        {
+            return Action.Pass;
+        }
+        else
+        {
+            return Action.BuildVillage;
+        }
+    }
+
+    public GridPoint RequestBuildingPosition(List<GridPoint> possiblePositions)
+    {
+        if(possiblePositions == null || possiblePositions.Count == 0)
+        {
+            Debug.LogWarning(name + " was asked to place a building, but no possible positions where given!");
+            return null;
+        }
+        int r = Random.Range(0, possiblePositions.Count);
+        return possiblePositions[r];
     }
 
     public void Initialize(string name, Color color)

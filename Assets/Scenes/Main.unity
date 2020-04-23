@@ -372,6 +372,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   pointsToWin: 12
   numberOfPlayers: 1
+  villagePrefab: {fileID: 8832107849633449914, guid: 15c6ade5718c46f4684c64c38017a4b0,
+    type: 3}
 --- !u!114 &330755335
 MonoBehaviour:
   m_ObjectHideFlags: 0
