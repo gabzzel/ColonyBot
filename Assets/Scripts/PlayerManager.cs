@@ -71,9 +71,17 @@ public class PlayerManager : MonoBehaviour
         return players[0].name;
     }
 
-    public void NextPlayer()
+    public void NextPlayer(bool notify = true)
     {
         playerInControl++;
         if(playerInControl >= players.Count) { playerInControl = 0; }
+        if (notify) { Notifier.singleton.Notify("Player " + (playerInControl + 1) + "'s turn!"); }
+    }
+
+    public void PreviousPlayer(bool notify = true)
+    {
+        playerInControl--;
+        if(playerInControl < 0) { playerInControl = players.Count - 1; }
+        if (notify) { Notifier.singleton.Notify("Player " + (playerInControl + 1) + "'s turn!"); }
     }
 }

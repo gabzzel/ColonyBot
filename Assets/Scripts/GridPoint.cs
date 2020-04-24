@@ -9,6 +9,7 @@ public class GridPoint
     public Vector2Int colRow = Vector2Int.zero;
     public bool isMiddle = false;
     public List<GridPoint> connectedTo = new List<GridPoint>();
+    public List<Line> connectedStreets = new List<Line>();
     public Building building = null;
     private Tile tile = null;
 
@@ -59,8 +60,31 @@ public class GridPoint
     }
 
     public List<GridPoint> GetNeighbouringGridPoints()
-    {
+    {   
         return connectedTo;
+    }
+
+    /// <summary>
+    /// Get the second level neighbours exluding tiles. 
+    /// </summary>
+    /// <returns> A list containing all second level neighbours, excluding tiles.</returns>
+    public List<GridPoint> GetSecondLevelNeighbours()
+    {
+        List<GridPoint> result = new List<GridPoint>();
+        foreach(GridPoint n1 in connectedTo)
+        {
+            if (!n1.isMiddle)
+            {
+                foreach (GridPoint n2 in n1.connectedTo)
+                {
+                    if (!n2.isMiddle && n2 != this)
+                    {
+                        result.Add(n2);
+                    }
+                }
+            }           
+        }
+        return result;
     }
 
     public List<Tile> GetNeighbouringTiles()
@@ -102,6 +126,26 @@ public class GridPoint
             result += t.GetValue();
         }
         return result;
+    }
+
+    /// <summary>
+    /// Creates a Line with reference to the street and returns it. Also references it from the destination.
+    /// </summary>
+    /// <param name="destination"> Where the street should be connected to</param>
+    /// <param name="street"> The Created street object </param>
+    /// <returns> The created Line </returns>
+    public Line CreateStreet(GridPoint destination, GameObject street)
+    {
+        Line line = new Line(this, destination, street);
+        if (!connectedStreets.Contains(line))
+        {
+            connectedStreets.Add(line);
+        }
+        if (!destination.connectedStreets.Contains(line))
+        {
+            destination.connectedStreets.Add(line);
+        }
+        return line;
     }
 }
 

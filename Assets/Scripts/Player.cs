@@ -37,7 +37,7 @@ public class Player : MonoBehaviour
     {
         this.name = name;
         this.color = color;
-        Debug.Log(name + " now has color " + color.ToString());
+        //Debug.Log(name + " now has color " + color.ToString());
         points = 0;
         resources.Clear();
         InitializeResources();

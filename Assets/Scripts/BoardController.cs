@@ -7,6 +7,7 @@ public class BoardController : MonoBehaviour
     [SerializeField] private GameObject tilePrefab = null;
     [SerializeField] private GameObject board = null;
     public Dictionary<Vector2Int, GridPoint> gridPoints = new Dictionary<Vector2Int, GridPoint>();
+    public List<Line> streets = new List<Line>();
     [SerializeField] private List<Tile> tiles = new List<Tile>();
 
     int diagonal = 5;
@@ -35,7 +36,7 @@ public class BoardController : MonoBehaviour
             Enums.Resource.Wool,
             Enums.Resource.Wool
         };
-    List<int> standardNumbers = new List<int> { 9, 3, 2, 3, 8, 4, 5, 5, 6, 0, 6, 10, 12, 11, 8, 9, 11, 4, 10};
+    List<int> standardNumbers = new List<int> { 9, 3, 2, 3, 8, 4, 5, 5, 6, 0, 6, 10, 12, 11, 8, 9, 11, 4, 10 };
 
     public void CreateFilledBoard()
     {
@@ -68,7 +69,7 @@ public class BoardController : MonoBehaviour
                     Enums.Resource res = standardResources[index]; // The random resource
                     tiles[i].SetResource(res);
                     indexes.RemoveAt(r);
-                } 
+                }
             }
         }
     }
@@ -127,14 +128,14 @@ public class BoardController : MonoBehaviour
     bool CheckHighChanceNeighbours()
     {
         // Go through all tiles...
-        foreach(Tile t in tiles)
+        foreach (Tile t in tiles)
         {
             // If this tile has a high chance of being rolled...
-            if(t.number == 6 || t.number == 8)
+            if (t.number == 6 || t.number == 8)
             {
-                foreach(Tile neighbour in t.GetNeighbouringTiles())
+                foreach (Tile neighbour in t.GetNeighbouringTiles())
                 {
-                    if(neighbour.number == 6 || neighbour.number == 8)
+                    if (neighbour.number == 6 || neighbour.number == 8)
                     {
                         return true;
                     }
@@ -182,21 +183,21 @@ public class BoardController : MonoBehaviour
         {
             //float maxY = (diagonal + 3) - Mathf.Abs(diagonal - 2 * x);
             // If x 
-            if(x > 1 && x < 9)
+            if (x > 1 && x < 9)
             {
                 for (int y = 2 - (x % 2); y < diagonal * 2; y++)
                 {
                     CreateHexagonPoints(x, y);
                 }
             }
-            else if(x == 1 || x == 9)
+            else if (x == 1 || x == 9)
             {
                 for (int y = 3; y <= 7; y++)
                 {
                     CreateHexagonPoints(x, y);
                 }
             }
-            else if(x == 0 || x == 10)
+            else if (x == 0 || x == 10)
             {
                 CreateHexagonPoints(x, 5);
                 CreateHexagonPoints(x, 6);
@@ -233,9 +234,9 @@ public class BoardController : MonoBehaviour
         foreach (GridPoint gp in gridPoints.Values)
         {
             GridPoint connectTo = null;
-            foreach(Vector2Int conn in connections)
+            foreach (Vector2Int conn in connections)
             {
-                if(gridPoints.TryGetValue(gp.colRow + conn, out connectTo))
+                if (gridPoints.TryGetValue(gp.colRow + conn, out connectTo))
                 {
                     gp.connectedTo.Add(connectTo);
                     //Debug.Log("Connecting " + gp.ToString() + " with " + connectTo);
@@ -256,7 +257,7 @@ public class BoardController : MonoBehaviour
     void CreateTiles()
     {
         tiles.Clear();
-        foreach(GridPoint gp in gridPoints.Values)
+        foreach (GridPoint gp in gridPoints.Values)
         {
             if (gp.isMiddle)
             {
@@ -272,9 +273,9 @@ public class BoardController : MonoBehaviour
     public List<Tile> GetTilesByNumber(int number)
     {
         List<Tile> result = new List<Tile>();
-        foreach(Tile t in tiles)
+        foreach (Tile t in tiles)
         {
-            if(t.number == number)
+            if (t.number == number)
             {
                 result.Add(t);
             }
@@ -287,16 +288,16 @@ public class BoardController : MonoBehaviour
     /// </summary>
     /// <param name="playerNumber"> The player whos turn it is. Set to -1 for free </param>
     /// <returns> A list of all possible placement points</returns>
-    public List<GridPoint> GetPossibleBuildingSites(int playerNumber, bool freePlacement)
+    public List<GridPoint> GetPossibleBuildingSites(Player player, bool freePlacement)
     {
         List<GridPoint> sites = new List<GridPoint>();
 
-        if(freePlacement)
+        if (freePlacement)
         {
-            foreach(GridPoint gp in gridPoints.Values)
+            foreach (GridPoint gp in gridPoints.Values)
             {
                 // If the gridpoint is not a tile and there is not already a building on it...
-                if(!gp.isMiddle && gp.building == null)
+                if (!gp.isMiddle && gp.building == null)
                 {
                     sites.Add(gp);
                 }
@@ -308,6 +309,67 @@ public class BoardController : MonoBehaviour
         }
 
         return sites;
+    }
+
+    public List<GridPoint> GetPossibleStreetPositions(Player player, GridPoint forcedStart = null)
+    {
+        List<GridPoint> result = new List<GridPoint>();
+        if (forcedStart == null)
+        {
+            // 1. Get all points where there is a building of the current player
+            List<GridPoint> startPoints = GetGridPointsWithBuildingOfPlayer(player);
+            // 2. Loop through all these points
+            foreach (GridPoint startPoint in startPoints)
+            {
+                // 3. Loop through all neighbours of these start points
+                foreach (GridPoint endPoint in startPoint.connectedTo)
+                {
+                    // 4. If it's not a middle
+                    if (!endPoint.isMiddle && !StreetAlreadyExists(startPoint, endPoint))
+                    {
+                        result.Add(endPoint);
+                    }
+                }
+            }
+        }
+        else
+        {
+            foreach (GridPoint endPoint in forcedStart.connectedTo)
+            {
+                if (!endPoint.isMiddle && !StreetAlreadyExists(forcedStart, endPoint))
+                {
+                    result.Add(endPoint);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public List<GridPoint> GetGridPointsWithBuildingOfPlayer(Player player)
+    {
+        List<GridPoint> result = new List<GridPoint>();
+        foreach (GridPoint gp in gridPoints.Values)
+        {
+            if (gp.building != null && gp.building.owner == player)
+            {
+                result.Add(gp);
+            }
+        }
+        if (result.Count == 0) { return null; }
+        return result;
+    }
+
+    public void CreateStreet(GridPoint start, GridPoint destination, GameObject street)
+    {
+        Debug.Log(start.ToString() + " is now connected to " + destination.ToString());
+        Line line = start.CreateStreet(destination, street);
+    }
+
+    public bool StreetAlreadyExists(GridPoint p1, GridPoint p2)
+    {
+        Line hypothetical = new Line(p1, p2, null);
+        return streets.Contains(hypothetical);
     }
 }
 
@@ -324,7 +386,7 @@ public class BoardControllerEditor : Editor
             bc.CreateEmptyBoard();
         }
 
-        if(GUILayout.Button("Create Filled Board"))
+        if (GUILayout.Button("Create Filled Board"))
         {
             bc.CreateFilledBoard();
         }

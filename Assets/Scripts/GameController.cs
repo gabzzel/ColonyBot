@@ -20,7 +20,7 @@ public class GameController : MonoBehaviour
 
     public void NewGame()
     {
-        Debug.Log("New game started!");
+        Notifier.singleton.Notify("New Game Started!");
         // 1. Create a new board
         bc.CreateFilledBoard();
         // 2. Initialize players
@@ -33,11 +33,27 @@ public class GameController : MonoBehaviour
 
     void InitialPlacements()
     {
+        int r = Random.Range(0, numberOfPlayers);
+        pm.playerInControl = r;
+        Notifier.singleton.Notify("Player " + (r + 1) + " may go first.");
+
         // Get a position from the players
         for (int i = 0; i < pm.players.Count; i++)
         {
-            GridPoint gp = pm.RequestBuildingPosition(bc.GetPossibleBuildingSites(i, true));
+            GridPoint gp = pm.RequestBuildingPosition(bc.GetPossibleBuildingSites(pm.players[pm.playerInControl], true));
             CreateVillage(gp);
+            string notification = "Player " + (pm.playerInControl + 1) + " - Village @ " + gp.colRow;
+            Notifier.singleton.Notify(notification);
+            if (i < pm.players.Count - 1) { pm.NextPlayer(); }
+        }
+
+        for (int i = 0; i < pm.players.Count; i++)
+        {
+            GridPoint gp = pm.RequestBuildingPosition(bc.GetPossibleBuildingSites(pm.players[pm.playerInControl], true));
+            CreateVillage(gp);
+            string notification = "Player " + (pm.playerInControl + 1) + " - Village @ " + gp.colRow;
+            Notifier.singleton.Notify(notification);
+            if (pm.playerInControl != r) { pm.PreviousPlayer(); }
         }
     }
 
@@ -45,6 +61,7 @@ public class GameController : MonoBehaviour
     {
         int dice = ThrowDice();
         uic.UpdateDiceRoll(dice);
+        Notifier.singleton.Notify("Dice rolled! Outcome: " + dice);
         GiveResourcesToPlayers(dice);
         uic.UpdateAllPlayers(pm.players);
     }
