@@ -7,7 +7,6 @@ public class BoardController : MonoBehaviour
     [SerializeField] private GameObject tilePrefab = null;
     [SerializeField] private GameObject board = null;
     public Dictionary<Vector2Int, GridPoint> gridPoints = new Dictionary<Vector2Int, GridPoint>();
-    public List<Line> streets = new List<Line>();
     [SerializeField] private List<Tile> tiles = new List<Tile>();
 
     int diagonal = 5;
@@ -238,8 +237,7 @@ public class BoardController : MonoBehaviour
             {
                 if (gridPoints.TryGetValue(gp.colRow + conn, out connectTo))
                 {
-                    gp.connectedTo.Add(connectTo);
-                    //Debug.Log("Connecting " + gp.ToString() + " with " + connectTo);
+                    gp.connectedTo.Add(connectTo, null);
                 }
             }
         }
@@ -283,70 +281,7 @@ public class BoardController : MonoBehaviour
         return result;
     }
 
-    /// <summary>
-    /// Returns all possible places a player can build
-    /// </summary>
-    /// <param name="playerNumber"> The player whos turn it is. Set to -1 for free </param>
-    /// <returns> A list of all possible placement points</returns>
-    public List<GridPoint> GetPossibleBuildingSites(Player player, bool freePlacement)
-    {
-        List<GridPoint> sites = new List<GridPoint>();
-
-        if (freePlacement)
-        {
-            foreach (GridPoint gp in gridPoints.Values)
-            {
-                // If the gridpoint is not a tile and there is not already a building on it...
-                if (!gp.isMiddle && gp.building == null)
-                {
-                    sites.Add(gp);
-                }
-            }
-        }
-        else
-        {
-            // For a later moment
-        }
-
-        return sites;
-    }
-
-    public List<GridPoint> GetPossibleStreetPositions(Player player, GridPoint forcedStart = null)
-    {
-        List<GridPoint> result = new List<GridPoint>();
-        if (forcedStart == null)
-        {
-            // 1. Get all points where there is a building of the current player
-            List<GridPoint> startPoints = GetGridPointsWithBuildingOfPlayer(player);
-            // 2. Loop through all these points
-            foreach (GridPoint startPoint in startPoints)
-            {
-                // 3. Loop through all neighbours of these start points
-                foreach (GridPoint endPoint in startPoint.connectedTo)
-                {
-                    // 4. If it's not a middle
-                    if (!endPoint.isMiddle && !StreetAlreadyExists(startPoint, endPoint))
-                    {
-                        result.Add(endPoint);
-                    }
-                }
-            }
-        }
-        else
-        {
-            foreach (GridPoint endPoint in forcedStart.connectedTo)
-            {
-                if (!endPoint.isMiddle && !StreetAlreadyExists(forcedStart, endPoint))
-                {
-                    result.Add(endPoint);
-                }
-            }
-        }
-
-        return result;
-    }
-
-    public List<GridPoint> GetGridPointsWithBuildingOfPlayer(Player player)
+    public List<GridPoint> GetGridPointsWithBuildingOfPlayer(ColonyPlayer player)
     {
         List<GridPoint> result = new List<GridPoint>();
         foreach (GridPoint gp in gridPoints.Values)
@@ -358,39 +293,5 @@ public class BoardController : MonoBehaviour
         }
         if (result.Count == 0) { return null; }
         return result;
-    }
-
-    public void CreateStreet(GridPoint start, GridPoint destination, GameObject street)
-    {
-        Debug.Log(start.ToString() + " is now connected to " + destination.ToString());
-        Line line = start.CreateStreet(destination, street);
-    }
-
-    public bool StreetAlreadyExists(GridPoint p1, GridPoint p2)
-    {
-        Line hypothetical = new Line(p1, p2, null);
-        return streets.Contains(hypothetical);
-    }
-}
-
-
-[CustomEditor(typeof(BoardController))]
-public class BoardControllerEditor : Editor
-{
-    public override void OnInspectorGUI()
-    {
-        BoardController bc = (BoardController)target;
-
-        if (GUILayout.Button("Create Empty Board"))
-        {
-            bc.CreateEmptyBoard();
-        }
-
-        if (GUILayout.Button("Create Filled Board"))
-        {
-            bc.CreateFilledBoard();
-        }
-
-        base.DrawDefaultInspector();
     }
 }

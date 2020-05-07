@@ -12,19 +12,10 @@ public class UIController : MonoBehaviour
 
     private void Awake()
     {
-        if(players.Count < 4)
-        {
-            players.Clear();
-            for (int i = 0; i < transform.childCount; i++)
-            {
-                players.Add(transform.GetChild(i).gameObject);
-            }
-        }
-
         gc = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
     }
 
-    public void Initialize(List<Player> ps)
+    public void Initialize(List<ColonyPlayer> ps)
     {
         // Set the player UI active based on the number of players
         for (int i = 0; i < players.Count; i++)
@@ -45,11 +36,12 @@ public class UIController : MonoBehaviour
     /// Updates the UI of all players
     /// </summary>
     /// <param name="ps"> The list of all players </param>
-    public void UpdateAllPlayers(List<Player> ps)
+    public void UpdateAllPlayers(List<ColonyPlayer> ps)
     {
         for (int i = 0; i < ps.Count; i++)
         {
-            UpdatePlayer(players[i], ps[i]);
+            if (ps[i].gameObject.activeSelf) { UpdatePlayer(players[i], ps[i]); }
+            else { players[i].SetActive(false); }
         }
     }
 
@@ -58,7 +50,7 @@ public class UIController : MonoBehaviour
     /// </summary>
     /// <param name="player"> The Gameobject that parents all UI concerning the player. </param>
     /// <param name="p"> The Player Object that contains all info of the player. </param>
-    void UpdatePlayer(GameObject player, Player p)
+    void UpdatePlayer(GameObject player, ColonyPlayer p)
     {
         Image background = player.GetComponent<Image>(); 
         Text name = player.transform.Find("Name").GetComponent<Text>();

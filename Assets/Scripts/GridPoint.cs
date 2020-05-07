@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using static Enums;
 
@@ -8,8 +9,7 @@ public class GridPoint
     public Vector2 position = Vector2.zero;
     public Vector2Int colRow = Vector2Int.zero;
     public bool isMiddle = false;
-    public List<GridPoint> connectedTo = new List<GridPoint>();
-    public List<Line> connectedStreets = new List<Line>();
+    public Dictionary<GridPoint, Building> connectedTo = new Dictionary<GridPoint, Building>();
     public Building building = null;
     private Tile tile = null;
 
@@ -24,7 +24,7 @@ public class GridPoint
     {
         if (!isMiddle)
         {
-            Debug.LogWarning(this.ToString() + " is not eligible for a tile!");
+            Debug.LogWarning(ToString() + " is not eligible for a tile!");
             return null;
         }
         else
@@ -61,7 +61,7 @@ public class GridPoint
 
     public List<GridPoint> GetNeighbouringGridPoints()
     {   
-        return connectedTo;
+        return connectedTo.Keys.ToList();
     }
 
     /// <summary>
@@ -71,11 +71,11 @@ public class GridPoint
     public List<GridPoint> GetSecondLevelNeighbours()
     {
         List<GridPoint> result = new List<GridPoint>();
-        foreach(GridPoint n1 in connectedTo)
+        foreach(GridPoint n1 in connectedTo.Keys)
         {
             if (!n1.isMiddle)
             {
-                foreach (GridPoint n2 in n1.connectedTo)
+                foreach (GridPoint n2 in n1.connectedTo.Keys)
                 {
                     if (!n2.isMiddle && n2 != this)
                     {
@@ -90,7 +90,7 @@ public class GridPoint
     public List<Tile> GetNeighbouringTiles()
     {
         List<Tile> result = new List<Tile>();
-        foreach (GridPoint neighbour in connectedTo)
+        foreach (GridPoint neighbour in connectedTo.Keys)
         {
             if (neighbour.isMiddle)
             {
@@ -126,26 +126,6 @@ public class GridPoint
             result += t.GetValue();
         }
         return result;
-    }
-
-    /// <summary>
-    /// Creates a Line with reference to the street and returns it. Also references it from the destination.
-    /// </summary>
-    /// <param name="destination"> Where the street should be connected to</param>
-    /// <param name="street"> The Created street object </param>
-    /// <returns> The created Line </returns>
-    public Line CreateStreet(GridPoint destination, GameObject street)
-    {
-        Line line = new Line(this, destination, street);
-        if (!connectedStreets.Contains(line))
-        {
-            connectedStreets.Add(line);
-        }
-        if (!destination.connectedStreets.Contains(line))
-        {
-            destination.connectedStreets.Add(line);
-        }
-        return line;
     }
 }
 
