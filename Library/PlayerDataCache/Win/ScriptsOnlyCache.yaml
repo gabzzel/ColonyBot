@@ -7,6 +7,7 @@ ScriptsOnlyBuild:
     - GameController
     - Notifier
     - PlayerManager
+    - PlayerUI
     - Tile
     - UIController
     Unity.2D.Animation.Editor.dll:
@@ -108,6 +109,8 @@ ScriptsOnlyBuild:
       Script: {instanceID: 14780}
     - Class: 114
       Script: {instanceID: 14848}
+    - Class: 114
+      Script: {instanceID: 36354}
     - Class: 115
       Script: {instanceID: 0}
     - Class: 128
@@ -327,7 +330,7 @@ ScriptsOnlyBuild:
     className: AnimationPlayableAsset
   - hash:
       serializedVersion: 2
-      Hash: 52594f609593ad53e46cb1b826c2f5fd
+      Hash: e98fceee024d2825955f0d4ed906dac0
     assemblyName: Assembly-CSharp.dll
     namespaceName: 
     className: UIController
@@ -721,7 +724,13 @@ ScriptsOnlyBuild:
     assemblyName: Unity.Timeline.dll
     namespaceName: UnityEngine.Timeline
     className: PlayableTrack
+  - hash:
+      serializedVersion: 2
+      Hash: 1d6fad6373a0bb48d5f86c7b18b6330f
+    assemblyName: Assembly-CSharp.dll
+    namespaceName: 
+    className: PlayerUI
   platform: 5
   scenePathNames:
   - Assets/Scenes/Main.unity
-  playerPath: C:/Users/Gabi/Documents/GitHub/ColonyBot/Builds/ColonyBot.exe
+  playerPath: C:/Users/Gabi van der Kooij/Documents/ColonyBot/Builds/ColonyBot.exe

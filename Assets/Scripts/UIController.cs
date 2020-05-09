@@ -9,6 +9,7 @@ public class UIController : MonoBehaviour
     public List<GameObject> players = new List<GameObject>();
     private GameController gc = null;
     [SerializeField] private Text diceRollText = null;
+    [SerializeField] private Text stepText = null;
 
     private void Awake()
     {
@@ -20,7 +21,7 @@ public class UIController : MonoBehaviour
         // Set the player UI active based on the number of players
         for (int i = 0; i < players.Count; i++)
         {
-            players[i].SetActive(i < ps.Count);
+            players[i].SetActive(i < GameController.singleton.numberOfPlayers);
         }
 
         UpdateAllPlayers(ps);
@@ -38,10 +39,9 @@ public class UIController : MonoBehaviour
     /// <param name="ps"> The list of all players </param>
     public void UpdateAllPlayers(List<ColonyPlayer> ps)
     {
-        for (int i = 0; i < ps.Count; i++)
+        for (int i = 0; i < GameController.singleton.numberOfPlayers; i++)
         {
-            if (ps[i].gameObject.activeSelf) { UpdatePlayer(players[i], ps[i]); }
-            else { players[i].SetActive(false); }
+            UpdatePlayer(players[i], ps[i]);
         }
     }
 
@@ -52,21 +52,18 @@ public class UIController : MonoBehaviour
     /// <param name="p"> The Player Object that contains all info of the player. </param>
     void UpdatePlayer(GameObject player, ColonyPlayer p)
     {
-        Image background = player.GetComponent<Image>(); 
-        Text name = player.transform.Find("Name").GetComponent<Text>();
-        Text points = player.transform.Find("Points").GetComponent<Text>();
+        Image background = player.GetComponent<Image>();
+        PlayerUI pui = player.GetComponent<PlayerUI>();
 
         background.color = p.color;
         background.SetAllDirty();
-        name.text = "Name: " + p.name;
-        points.text = "Points: " + p.points;
-
-        foreach(Resource res in GetResourcesAsList())
-        {
-            if(res == Resource.None) { continue; }
-            Text resText = player.transform.Find(res.ToString()).GetComponent<Text>();
-            resText.text = res.ToString() + ": " + p.resources[res];
-        }
+        pui.name.text = "Name: " + p.name;
+        pui.points.text = "Points: " + p.points;
+        pui.wood.text = "Wood: " + p.resources[Resource.Wood];
+        pui.ore.text = "Ore: " + p.resources[Resource.Ore];
+        pui.wool.text = "Wool: " + p.resources[Resource.Wool];
+        pui.grain.text = "Grain: " + p.resources[Resource.Grain];
+        pui.stone.text = "Stone: " + p.resources[Resource.Stone];
     }
 
     public void UpdateDiceRoll(int result)
@@ -80,5 +77,10 @@ public class UIController : MonoBehaviour
             diceRollText.text = "Roll dice! \n Previous: " + result;
         }
         
+    }
+
+    public void UpdateStepText(int steps)
+    {
+        stepText.text = "Steps: (#" + steps + ")";
     }
 }

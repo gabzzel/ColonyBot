@@ -5,6 +5,8 @@ using Unity.MLAgents;
 
 public class GameController : MonoBehaviour
 {
+    public static GameController singleton = null;
+
     public int pointsToWin = 12;
     [Range(1, 4, order = 1)] public int numberOfPlayers = 3;
 
@@ -16,11 +18,21 @@ public class GameController : MonoBehaviour
 
     private void Awake()
     {
+        if(singleton == null) { singleton = this; }
+        else { Destroy(this.gameObject); }
+
         bc = GetComponent<BoardController>();
         pm = GetComponent<PlayerManager>();
         uic = GameObject.FindGameObjectWithTag("UIController").GetComponent<UIController>();
         LoadSettings();
+        Academy.Instance.AutomaticSteppingEnabled = false;
         Academy.Instance.OnEnvironmentReset += NewGame;
+    }
+
+
+    private void Start()
+    {
+        NewGame(); 
     }
 
     public void LoadSettings()
@@ -41,9 +53,32 @@ public class GameController : MonoBehaviour
         pm.Initialize(numberOfPlayers);
         // 3. Initialize UI of the players
         uic.Initialize(pm.players);
-        InitialPlacements();
+        //InitialPlacements();
     }
 
+    private void FixedUpdate()
+    {
+        ColonyPlayer winner = pm.PlayerHasWon();
+        if(winner == null)
+        {
+            NextStep();
+        }
+        else
+        {
+            EndGame(winner);
+        }
+    }
+
+    public void NextStep()
+    {
+        // Perform 1 step / round where every player gets a turn and dices are rolled before their turns
+        PerformDiceRoll();
+        pm.NextPlayer();
+        pm.RequestAction();
+        uic.UpdateStepText(Academy.Instance.StepCount);
+        uic.UpdateAllPlayers(pm.players);
+        Academy.Instance.EnvironmentStep();
+    }
     
     void InitialPlacements()
     {
@@ -143,8 +178,11 @@ public class GameController : MonoBehaviour
         }
     }
 
-    public void EndGame()
+    public void EndGame(ColonyPlayer winner)
     {
         Notifier.singleton.Notify("Game Ended!");
+        Notifier.singleton.Notify(winner.name + " has won!");
+        winner.AddReward(10f);
+        pm.SetAllPlayersDone();
     }
 }
