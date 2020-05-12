@@ -10,6 +10,7 @@ public class GridPoint
     public Vector2Int colRow = Vector2Int.zero;
     public bool isMiddle = false;
     public Dictionary<GridPoint, Building> connectedTo = new Dictionary<GridPoint, Building>();
+    public Dictionary<Resource, float> resourceValues = new Dictionary<Resource, float>();
     public Building building = null;
     private Tile tile = null;
 
@@ -17,7 +18,15 @@ public class GridPoint
     {
         this.position = position;
         this.colRow = colRow;
-        isMiddle = position.y % 3 == 1 || (position.y + 0.5) % 3 == 0;
+        //isMiddle = position.y % 3 == 1 || (position.y + 0.5) % 3 == 0;
+
+        // Either x is odd and (y+1)%3==0 OR x is even and (y-1)%3==0
+        isMiddle = (colRow.x % 2 == 1 && (colRow.y + 1) % 3 == 0) || (colRow.x % 2 == 0 && (colRow.y - 1) % 3 == 0);
+
+        foreach (Resource res in Enums.GetResourcesAsList())
+        {
+            resourceValues.Add(res, 0);
+        }
     }
 
     public Tile GetTile()
@@ -106,16 +115,21 @@ public class GridPoint
     /// <returns></returns>
     public Dictionary<Resource, float> GetResourceValues()
     {
-        Dictionary<Resource, float> values = new Dictionary<Resource, float>();
-        foreach(Resource res in GetResourcesAsList())
+        return resourceValues;
+    }
+
+    /// <summary>
+    /// Update the resource values of our neighbours when our tile has been set. This is called by our tile when our tile is given a number.
+    /// </summary>
+    public void UpdateNeighbourValues()
+    {
+        foreach(GridPoint neighbour in GetNeighbouringGridPoints())
         {
-            values.Add(res, 0);
+            if (!neighbour.isMiddle && tile.resource != Resource.None)
+            {
+                neighbour.resourceValues[tile.resource] += tile.value;
+            }    
         }
-        foreach(Tile t in GetNeighbouringTiles())
-        {
-            values[t.resource] += t.GetValue();
-        }
-        return values;
     }
 
     public float GetValue()
@@ -123,7 +137,7 @@ public class GridPoint
         float result = 0;
         foreach(Tile t in GetNeighbouringTiles())
         {
-            result += t.GetValue();
+            result += t.value;
         }
         return result;
     }

@@ -8,6 +8,7 @@ public class Tile : MonoBehaviour
     [SerializeField] private Text text = null;
     public Enums.Resource resource = Enums.Resource.None;
     public int number = 0;
+    public float value = 0;
     public GridPoint gridPoint = null;
 
     public void SetGridPoint(GridPoint gp)
@@ -55,6 +56,8 @@ public class Tile : MonoBehaviour
 
     public void SetNumber(int number)
     {
+        this.number = number;
+
         if (number != 0)
         {
             text.text = number.ToString();
@@ -69,13 +72,14 @@ public class Tile : MonoBehaviour
                 text.fontStyle = FontStyle.Normal;
                 text.fontSize = 30;
             }
+
+            this.value = (6f - Mathf.Abs(7f - number)) / 36f;
+            this.gridPoint.UpdateNeighbourValues();
         }
         else
         {
             text.text = "";
-        }
-
-        this.number = number;
+        }       
     }
 
     public List<Tile> GetNeighbouringTiles()
@@ -102,13 +106,6 @@ public class Tile : MonoBehaviour
     public override string ToString()
     {
         return "Tile @ " + gridPoint.colRow.ToString() + ": " + resource.ToString() + " - " + number;
-    }
-
-    // Get the chance this tile will be rolled by dice
-    public float GetValue()
-    {
-        float value = (6 - Mathf.Abs(7 - number)) / 36;
-        return value;
     }
 }
 

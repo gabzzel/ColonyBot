@@ -9,6 +9,8 @@ public class GameController : MonoBehaviour
 
     public int pointsToWin = 12;
     [Range(1, 4, order = 1)] public int numberOfPlayers = 3;
+    public float stepTime = 1f;
+    private float stepTimer = 0f;
 
     [SerializeField] private GameObject villagePrefab = null;
     [SerializeField] private GameObject streetPrefab = null;
@@ -24,7 +26,6 @@ public class GameController : MonoBehaviour
         bc = GetComponent<BoardController>();
         pm = GetComponent<PlayerManager>();
         uic = GameObject.FindGameObjectWithTag("UIController").GetComponent<UIController>();
-        LoadSettings();
         Academy.Instance.AutomaticSteppingEnabled = false;
         Academy.Instance.OnEnvironmentReset += NewGame;
     }
@@ -32,16 +33,17 @@ public class GameController : MonoBehaviour
 
     private void Start()
     {
-        NewGame(); 
+        LoadSettings();
     }
 
     public void LoadSettings()
     {
         EnvironmentParameters ep = Academy.Instance.EnvironmentParameters;
-        numberOfPlayers = Mathf.FloorToInt(ep.GetWithDefault("number_of_players", 3f));
+        numberOfPlayers = Mathf.FloorToInt(ep.GetWithDefault("number_of_players", 4f));
         pointsToWin = Mathf.FloorToInt(ep.GetWithDefault("points_to_win", 12f));
         bc.useStandard = ep.GetWithDefault("standard_board", 0f) == 1 ? true : false;
         bc.allowHighChanceNeighbours = ep.GetWithDefault("allow_high_chance_neighbours", 0f) == 1 ? true : false;
+        stepTime = Mathf.Max(ep.GetWithDefault("step_time", 1f), 0);
     }
 
     public void NewGame()
@@ -61,7 +63,13 @@ public class GameController : MonoBehaviour
         ColonyPlayer winner = pm.PlayerHasWon();
         if(winner == null)
         {
-            NextStep();
+            stepTimer += Time.fixedDeltaTime;
+            if(stepTimer >= stepTime)
+            {
+                NextStep();
+                stepTimer = 0f;
+            }
+            //NextStep();
         }
         else
         {
@@ -132,7 +140,7 @@ public class GameController : MonoBehaviour
         return dice1 + dice2;
     }
 
-    void CreateVillage(GridPoint gp)
+    public void CreateVillage(GridPoint gp)
     {
         if(gp == null)
         {
@@ -142,7 +150,7 @@ public class GameController : MonoBehaviour
         ColonyPlayer currentPlayer = pm.players[pm.currentPlayer];
         GameObject villageObject = Instantiate(villagePrefab, gp.position, Quaternion.identity, currentPlayer.transform);
         Building b = villageObject.GetComponent<Building>();
-        b.owner = currentPlayer;
+        b.Owner = currentPlayer;
     }
 
     void CreateStreet(GridPoint start, GridPoint dest)
@@ -155,7 +163,7 @@ public class GameController : MonoBehaviour
         ColonyPlayer currentPlayer = pm.players[pm.currentPlayer]; // Get the current player
         GameObject streetObject = Instantiate(streetPrefab, start.position - dest.position, Quaternion.identity, currentPlayer.transform); 
         Building b = streetObject.GetComponent<Building>();
-        b.owner = currentPlayer; // Set the owner of the street to the current player
+        b.Owner = currentPlayer; // Set the owner of the street to the current player
         start.connectedTo[dest] = b; // Connect the start to the dest with a street
         dest.connectedTo[start] = b; // Connect the dest to the start with the same street
     }
@@ -172,7 +180,7 @@ public class GameController : MonoBehaviour
                 {
                     Building b = gp.building;
                     int number = b.type == BuildingType.Village ? 1 : 2;
-                    b.owner.GiveResources(t.resource, number);
+                    b.Owner.GiveResources(t.resource, number);
                 }
             }
         }

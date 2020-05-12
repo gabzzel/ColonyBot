@@ -22,7 +22,6 @@ public class PlayerManager : MonoBehaviour
         {
             players[i].gameObject.SetActive(i < numberOfPlayers);
             players[i].Initialize();
-            players[i].GetComponent<BehaviorParameters>().TeamId = i;
         }
     }
 

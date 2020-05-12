@@ -4,12 +4,14 @@ using UnityEditor;
 
 public class BoardController : MonoBehaviour
 {
+    [SerializeField] private Vector2 offset = Vector2.zero;
+
     [SerializeField] private GameObject tilePrefab = null;
+    [SerializeField] private GameObject gridPointIndicator = null;
     [SerializeField] private GameObject board = null;
     public Dictionary<Vector2Int, GridPoint> gridPoints = new Dictionary<Vector2Int, GridPoint>();
     [SerializeField] private List<Tile> tiles = new List<Tile>();
 
-    int diagonal = 5;
     public bool useStandard = false;
     public bool allowHighChanceNeighbours = false;
 
@@ -95,7 +97,7 @@ public class BoardController : MonoBehaviour
                     int r = Random.Range(0, indexes.Count); // Get a random index
                     int index = indexes[r]; // Get the index of the number
                     int num = standardNumbers[index]; // The random number
-                    tiles[i].SetNumber(num);
+                    tiles[i].SetNumber(num); // THIS ALSO UPDATES THE VALUES OF THE GRIDPOINTS! see tile.cs
                     indexes.RemoveAt(r);
                 }
             }
@@ -157,6 +159,14 @@ public class BoardController : MonoBehaviour
         ConnectGridPoints();
         // 4. Create the tiles objects and link them to the correct GridPoints
         CreateTiles();
+
+
+        int number = 0;
+        foreach(GridPoint p in gridPoints.Values)
+        {
+            if (!p.isMiddle) { number++; }
+        }
+        Debug.Log(number);
     }
 
     void Clear()
@@ -178,13 +188,13 @@ public class BoardController : MonoBehaviour
         // Als x = Round(diagonal / 2), dan moet y tot diagonal gaan
         // Als x = 0, dan moet y tot 3 gaan
         // Als x = diagonal, dan moet y ook tot 3
-        for (int x = 0; x <= diagonal * 2; x++)
+        for (int x = 0; x <= 10; x++)
         {
             //float maxY = (diagonal + 3) - Mathf.Abs(diagonal - 2 * x);
             // If x 
             if (x > 1 && x < 9)
             {
-                for (int y = 2 - (x % 2); y < diagonal * 2; y++)
+                for (int y = 2 - (x % 2); y < 10; y++)
                 {
                     CreateHexagonPoints(x, y);
                 }
@@ -209,8 +219,10 @@ public class BoardController : MonoBehaviour
         float y = row;
         if (col % 2 == 1) { y += 0.5f; }
         float x = col * 1.5f / Mathf.Sqrt(3);
-        Vector2 globalPos = new Vector2(x, y);
+        Vector2 globalPos = new Vector2(x * tilePrefab.transform.lossyScale.x / 2, y * tilePrefab.transform.lossyScale.y / 2) + offset;
         Vector2Int colRow = new Vector2Int(col, row);
+        //GameObject g = Instantiate(gridPointIndicator, globalPos, Quaternion.identity);
+        //g.name = "GridPoint " + colRow;
         GridPoint gp = new GridPoint(globalPos, colRow);
         gridPoints.Add(colRow, gp);
     }
@@ -286,7 +298,7 @@ public class BoardController : MonoBehaviour
         List<GridPoint> result = new List<GridPoint>();
         foreach (GridPoint gp in gridPoints.Values)
         {
-            if (gp.building != null && gp.building.owner == player)
+            if (gp.building != null && gp.building.Owner == player)
             {
                 result.Add(gp);
             }

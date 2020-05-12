@@ -43,3 +43,12 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Board
+    uniqueID: 137951675
+    locked: 0
+  - name: Building
+    uniqueID: 1183143709
+    locked: 0
+  - name: Front
+    uniqueID: 3917894641
+    locked: 0

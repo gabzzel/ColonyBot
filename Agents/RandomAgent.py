@@ -1,29 +1,28 @@
-import time
-
-import numpy as np
-import sys
 import random
-import math
+import numpy as np
 
-from mlagents_envs.environment import UnityEnvironment
-from mlagents_envs.side_channel.engine_configuration_channel import EngineConfig, EngineConfigurationChannel
-from mlagents_envs.side_channel.float_properties_channel import FloatPropertiesChannel
+class RandomAgent:
+    def __init__(self, id, behavior_name, action_branches, obs_shape):
+        self.reward = 0
+        self.id = id
+        self.behavior_name = behavior_name
+        self.action_branches = action_branches
+        self.obs_shape = obs_shape
+        self.done = self.is_done()
 
-env_name = "C:\\Users\\Gabi van der Kooij\\Documents\\ColonyBot\\Builds\\ColonyBot.exe"
-train_mode = True  # Whether to run the environment in training or inference mode
+    def is_done(self) -> int:
+        return self.reward >= 12
 
-engine_configuration_channel = EngineConfigurationChannel()
-side_channel = FloatPropertiesChannel()
-side_channel.set_property("number_of_players", 1)
-env = UnityEnvironment(base_port=5006, file_name=env_name, side_channels=[side_channel, engine_configuration_channel])
-engine_configuration_channel.set_configuration_parameters(time_scale=1.0, height=800, width=800)
+    def take_action(self, branch_id, obs) -> np.array:
+        # zeros = np.zeros(shape=(self.action_branches[branch_id], ))  # Create an array filled with zeros
+        # random_index = np.random.randint(0, self.action_branches[branch_id])
+        # zeros[random_index] = 1
+        grid_obs = self.preprocess_grid_obs(obs=obs)
+        return np.random.randint(0, self.action_branches[branch_id])
 
-env.reset()
-bn = env.get_behavior_names()
-print(bn)
-time.sleep(5)
-env.close()
-
-
-
-
+    def preprocess_grid_obs(self, obs):
+        resource_obs = obs[:5]  # The resources currently in hand
+        grid_obs = obs[5:]
+        processed_grid_obs = np.array(grid_obs)
+        processed_grid_obs.reshape((6, 54))
+        return processed_grid_obs

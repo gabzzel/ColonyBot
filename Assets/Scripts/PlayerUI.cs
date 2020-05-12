@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class PlayerUI : MonoBehaviour
 {
-    public Text name = null;
+    public new Text name = null;
     public Text points = null;
     public Text wood = null;
     public Text ore = null;
