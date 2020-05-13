@@ -10,6 +10,7 @@ using System.Linq;
 public class ColonyPlayer : Agent
 {
     public int points = 0;
+    private int totalRes = 0;
     public Dictionary<Resource, int> resources;
     public Color color = Color.blue;
 
@@ -39,6 +40,8 @@ public class ColonyPlayer : Agent
             sensor.AddObservation(resources[res]);
         }
 
+
+        // For each gridpoint, get the following info : if there is a building and the value per resource
         foreach(GridPoint gp in bc.gridPoints.Values)
         {
             if (gp.isMiddle) { continue; }
@@ -67,14 +70,42 @@ public class ColonyPlayer : Agent
         Action action = Enums.GetActionByNumber(Mathf.FloorToInt(vectorAction[0]));
         Notifier.singleton.Notify(name + " takes action " + action.ToString());
         int gridIndex = Mathf.FloorToInt(vectorAction[1]);
-        if(action == Action.BuildVillage)
+        GridPoint gp = bc.gridPoints.Values.ToList()[gridIndex];
+        if (action == Action.BuildVillage)
         {
-            gc.CreateVillage(bc.gridPoints.Values.ToList()[gridIndex]);
+            gc.CreateVillageOrCity(gp, false);
+        }
+        else if(action == Action.BuildCity)
+        {
+            gc.CreateVillageOrCity(gp, true);
+        }
+    }
+
+    public override void CollectDiscreteActionMasks(DiscreteActionMasker actionMasker)
+    {
+        // Mask action for which we don't have the res
+        List<int> buildInts = new List<int>();
+        // Add actions to the action mask if we can't afford to build it
+        if(totalRes < 5 || resources[Resource.Ore] < 3 || resources[Resource.Grain] < 2) { buildInts.Add(Enums.GetActionNumber(Action.BuildCity)); }
+        if(totalRes < 4 ||  resources[Resource.Grain] < 1 || resources[Resource.Wood] < 1 || resources[Resource.Wool] < 1 || resources[Resource.Stone] < 1) { buildInts.Add(Enums.GetActionNumber(Action.BuildVillage)); }
+        if(totalRes < 2 || resources[Resource.Stone] < 1 || resources[Resource.Wood] < 1) { buildInts.Add(GetActionNumber(Action.BuildVillage)); }
+        actionMasker.SetMask(0, buildInts);
+
+        List<int> gridPointsInts = new List<int>();
+        List<GridPoint> gridPoints = bc.gridPoints.Values.ToList();
+        for (int i = 0; i < gridPoints.Count; i++)
+        {
+            GridPoint gp = gridPoints[i];
+            if(gp.isMiddle || gp.building != null)
+            {
+
+            }
         }
     }
 
     public void GiveResources(Resource res, int number = 1)
     {
         resources[res] += number;
+        totalRes += number;
     }
 }

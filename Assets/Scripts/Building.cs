@@ -4,7 +4,7 @@ using static Enums;
 public class Building : MonoBehaviour
 {
     private ColonyPlayer owner = null;
-    public BuildingType type = BuildingType.Village;
+    [SerializeField] private BuildingType type = BuildingType.Village;
 
     public ColonyPlayer Owner
     {
@@ -14,5 +14,10 @@ public class Building : MonoBehaviour
             this.GetComponent<SpriteRenderer>().color = value.color;
             owner = value;
         }
+    }
+
+    public BuildingType Type
+    {
+        get { return type; }
     }
 }

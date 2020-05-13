@@ -406,7 +406,7 @@ ScriptsOnlyBuild:
     className: TMP_Asset
   - hash:
       serializedVersion: 2
-      Hash: 4db1153a180d60d5139afb436380ae21
+      Hash: 2bc547916096fa23c9052d2cf4b48485
     assemblyName: Assembly-CSharp.dll
     namespaceName: 
     className: BoardController
@@ -442,7 +442,7 @@ ScriptsOnlyBuild:
     className: SpriteSkinEntity
   - hash:
       serializedVersion: 2
-      Hash: 4cc6ceffa56e3d0204253fdb412ea932
+      Hash: ce20989477e3b2bfdaf62fcca2799842
     assemblyName: Assembly-CSharp.dll
     namespaceName: 
     className: GameController

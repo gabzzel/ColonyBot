@@ -13,6 +13,7 @@ public class GameController : MonoBehaviour
     private float stepTimer = 0f;
 
     [SerializeField] private GameObject villagePrefab = null;
+    [SerializeField] private GameObject cityPrefab = null;
     [SerializeField] private GameObject streetPrefab = null;
     private BoardController bc = null;
     private PlayerManager pm = null;
@@ -140,7 +141,7 @@ public class GameController : MonoBehaviour
         return dice1 + dice2;
     }
 
-    public void CreateVillage(GridPoint gp)
+    public void CreateVillageOrCity(GridPoint gp, bool city)
     {
         if(gp == null)
         {
@@ -148,7 +149,9 @@ public class GameController : MonoBehaviour
             return;
         }
         ColonyPlayer currentPlayer = pm.players[pm.currentPlayer];
-        GameObject villageObject = Instantiate(villagePrefab, gp.position, Quaternion.identity, currentPlayer.transform);
+        GameObject villageObject = city ? 
+            Instantiate(cityPrefab, gp.position, Quaternion.identity, currentPlayer.transform) : 
+            Instantiate(villagePrefab, gp.position, Quaternion.identity, currentPlayer.transform);
         Building b = villageObject.GetComponent<Building>();
         b.Owner = currentPlayer;
     }
@@ -179,7 +182,7 @@ public class GameController : MonoBehaviour
                 if(gp.building != null)
                 {
                     Building b = gp.building;
-                    int number = b.type == BuildingType.Village ? 1 : 2;
+                    int number = b.Type == BuildingType.Village ? 1 : 2;
                     b.Owner.GiveResources(t.resource, number);
                 }
             }
