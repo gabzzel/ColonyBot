@@ -66,49 +66,49 @@ ScriptsOnlyBuild:
     - Class: 109
       Script: {instanceID: 0}
     - Class: 114
-      Script: {instanceID: 11240}
+      Script: {instanceID: 11202}
     - Class: 114
-      Script: {instanceID: 11242}
+      Script: {instanceID: 11204}
     - Class: 114
-      Script: {instanceID: 11418}
+      Script: {instanceID: 11380}
     - Class: 114
-      Script: {instanceID: 11562}
+      Script: {instanceID: 11524}
     - Class: 114
-      Script: {instanceID: 11566}
+      Script: {instanceID: 11528}
     - Class: 114
-      Script: {instanceID: 11620}
+      Script: {instanceID: 11582}
     - Class: 114
-      Script: {instanceID: 11680}
+      Script: {instanceID: 11642}
     - Class: 114
-      Script: {instanceID: 12152}
+      Script: {instanceID: 12114}
     - Class: 114
-      Script: {instanceID: 12182}
+      Script: {instanceID: 12144}
     - Class: 114
-      Script: {instanceID: 12376}
+      Script: {instanceID: 12338}
     - Class: 114
-      Script: {instanceID: 12748}
+      Script: {instanceID: 12710}
     - Class: 114
-      Script: {instanceID: 12792}
+      Script: {instanceID: 12754}
     - Class: 114
-      Script: {instanceID: 12880}
+      Script: {instanceID: 12842}
     - Class: 114
-      Script: {instanceID: 12922}
+      Script: {instanceID: 12884}
     - Class: 114
-      Script: {instanceID: 13218}
+      Script: {instanceID: 13180}
     - Class: 114
-      Script: {instanceID: 13382}
+      Script: {instanceID: 13344}
     - Class: 114
-      Script: {instanceID: 13616}
+      Script: {instanceID: 13578}
     - Class: 114
-      Script: {instanceID: 13808}
+      Script: {instanceID: 13770}
     - Class: 114
-      Script: {instanceID: 14110}
+      Script: {instanceID: 14074}
     - Class: 114
-      Script: {instanceID: 14310}
+      Script: {instanceID: 14274}
     - Class: 114
-      Script: {instanceID: 14818}
+      Script: {instanceID: 14782}
     - Class: 114
-      Script: {instanceID: 14886}
+      Script: {instanceID: 14850}
     - Class: 115
       Script: {instanceID: 0}
     - Class: 128
@@ -731,4 +731,4 @@ ScriptsOnlyBuild:
   platform: 5
   scenePathNames:
   - Assets/Scenes/Main.unity
-  playerPath: C:/Users/Gabi van der Kooij/Documents/ColonyBot/ColonyBot.exe
+  playerPath: C:/Users/Gabi van der Kooij/Documents/ColonyBot/Builds/ColonyBot.exe

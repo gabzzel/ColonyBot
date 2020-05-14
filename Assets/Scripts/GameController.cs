@@ -19,6 +19,8 @@ public class GameController : MonoBehaviour
     private PlayerManager pm = null;
     private UIController uic = null;
 
+    private List<int> initialPlayers = new List<int>();
+
     private void Awake()
     {
         if(singleton == null) { singleton = this; }
@@ -54,9 +56,16 @@ public class GameController : MonoBehaviour
         bc.CreateFilledBoard();
         // 2. Initialize players
         pm.Initialize(numberOfPlayers);
+        // 2.1 Destroy all buildings
+        for (int i = GameObject.FindGameObjectsWithTag("Building").Length - 1; i >= 0; i--)
+        {
+            GameObject building = GameObject.FindGameObjectsWithTag("Building")[i];
+            Destroy(building);
+        }
         // 3. Initialize UI of the players
         uic.Initialize(pm.players);
-        //InitialPlacements();
+        // 4. Decide the initial order of free placements
+        DecideInitialPlayerOrder();
     }
 
     private void FixedUpdate()
@@ -70,7 +79,6 @@ public class GameController : MonoBehaviour
                 NextStep();
                 stepTimer = 0f;
             }
-            //NextStep();
         }
         else
         {
@@ -80,50 +88,43 @@ public class GameController : MonoBehaviour
 
     public void NextStep()
     {
-        // Perform 1 step / round where every player gets a turn and dices are rolled before their turns
-        ColonyPlayer currentPlayer = pm.CurrentPlayer;
+        if(initialPlayers.Count > 0)
+        {
+            pm.currentPlayer = initialPlayers[initialPlayers.Count - 1];
+            initialPlayers.RemoveAt(initialPlayers.Count - 1);
+            pm.CurrentPlayer.RequestDecision();
+        }
+        else
+        {
+            // Perform 1 step / round where every player gets a turn and dices are rolled before their turns
+            ColonyPlayer currentPlayer = pm.CurrentPlayer;
 
-        // If the current player passed last turn, roll the dice
-        if(currentPlayer.turnPhase == TurnPhase.Pass) { PerformDiceRoll(); }
+            // If the current player passed last turn, roll the dice
+            if (currentPlayer.turnPhase == TurnPhase.Pass) { PerformDiceRoll(); }
 
-        // Request an action from the current player
-        currentPlayer.RequestAction();
+            // Request an action from the current player
+            currentPlayer.RequestDecision();
+        }
 
         uic.UpdateStepText(Academy.Instance.StepCount);
         uic.UpdateAllPlayers(pm.players);
         Academy.Instance.EnvironmentStep();
+
     }
     
-    void InitialPlacements()
+    void DecideInitialPlayerOrder()
     {
+        List<int> firstHalf = new List<int>();
         int r = Random.Range(0, numberOfPlayers);
-        pm.currentPlayer = r;
-        Notifier.singleton.Notify("Player " + (r + 1) + " may go first.");
-
-        pm.players[pm.currentPlayer].RequestDecision();
-
-        /*
-
-        // Get a position from the players
-        for (int i = 0; i < pm.players.Count; i++)
+        for (int i = 0; i < numberOfPlayers; i++)
         {
-            //GridPoint gp = pm.RequestBuildingPosition(bc.GetPossibleBuildingSites(pm.players[pm.currentPlayer], true));
-            CreateVillage(gp);
-            string notification = "Player " + (pm.currentPlayer + 1) + " - Village @ " + gp.colRow;
-            Notifier.singleton.Notify(notification);
-            if (i < pm.players.Count - 1) { pm.NextPlayer(); }
+            int value = (i + r) % numberOfPlayers;
+            firstHalf.Add(value);
         }
-
-        for (int i = 0; i < pm.players.Count; i++)
-        {
-            //GridPoint gp = pm.RequestBuildingPosition(bc.GetPossibleBuildingSites(pm.players[pm.currentPlayer], true));
-            CreateVillage(gp);
-            string notification = "Player " + (pm.currentPlayer + 1) + " - Village @ " + gp.colRow;
-            Notifier.singleton.Notify(notification);
-            if (pm.currentPlayer != r) { pm.PreviousPlayer(); }
-        }
-
-        */
+        List<int> secondHalf = new List<int>(firstHalf);
+        secondHalf.Reverse();
+        firstHalf.AddRange(secondHalf);
+        initialPlayers = firstHalf;
     }
 
     public void PerformDiceRoll()
@@ -146,40 +147,44 @@ public class GameController : MonoBehaviour
         return dice1 + dice2;
     }
 
-    public void CreateVillageOrCity(GridPoint gp, bool city)
+    public Building CreateVillageOrCity(GridPoint gp, bool city, ColonyPlayer cp)
     {
         if(gp == null)
         {
             Debug.LogWarning("Cannot create village on null Gridpoint!");
-            return;
+            return null;
         }
-        ColonyPlayer currentPlayer = pm.players[pm.currentPlayer];
         GameObject villageObject = city ? 
-            Instantiate(cityPrefab, gp.position, Quaternion.identity, currentPlayer.transform) : 
-            Instantiate(villagePrefab, gp.position, Quaternion.identity, currentPlayer.transform);
+            Instantiate(cityPrefab, gp.position, Quaternion.identity, cp.transform) : 
+            Instantiate(villagePrefab, gp.position, Quaternion.identity, cp.transform);
         Building b = villageObject.GetComponent<Building>();
-        b.Owner = currentPlayer;
-        currentPlayer.AddReward(1f);
+        b.Owner = cp;
+        cp.AddReward(1f);
+        return b;
     }
 
-    public void CreateStreet(GridPoint dest)
+    /// <summary>
+    /// Create a street directed towards some destination GridPoint for a certain Player
+    /// </summary>
+    /// <param name="dest"> Where the street will go to. </param>
+    /// <param name="cp"> For which player the street will be build </param>
+    public void CreateStreet(GridPoint dest, ColonyPlayer cp)
     {
         if(dest == null) { Debug.LogError("Cannot create street to null GridPoint!"); return; }
-        ColonyPlayer player = pm.CurrentPlayer;
 
         GridPoint start = null;
 
-        // Find a starting point which either has a building on it, or is connected with a street
+        // Find a starting point which either has a building on it, or is connected with a street to the destination
         foreach(KeyValuePair<GridPoint, Building> connection in dest.connectedTo)
         {
-            if(connection.Key.building != null && connection.Key.building.Owner == player)
+            if(connection.Key.building != null && connection.Key.building.Owner == cp)
             {
                 start = connection.Key;
                 break;
             }
             foreach(KeyValuePair<GridPoint, Building> connection2 in connection.Key.connectedTo)
             {
-                if(connection2.Value != null && connection2.Value.Owner == player)
+                if(connection2.Value != null && connection2.Value.Owner == cp)
                 {
                     start = connection.Key;
                     break;
@@ -190,8 +195,8 @@ public class GameController : MonoBehaviour
 
         Vector2 position = new Vector2(dest.position.x - start.position.x, dest.position.y - start.position.y);
         float rotation = dest.position.y > start.position.y ? 30f : -30f;
-        GameObject street = Instantiate(streetPrefab, position, Quaternion.Euler(0, 0, rotation), player.transform);
-        street.GetComponent<Building>().Owner = player;
+        GameObject street = Instantiate(streetPrefab, position, Quaternion.Euler(0, 0, rotation), cp.transform);
+        street.GetComponent<Building>().Owner = cp;
     }
 
     void GiveResourcesToPlayers(int diceRoll)

@@ -316,14 +316,14 @@ public class BoardController : MonoBehaviour
     /// <param name="player"> The ColonyPlayer that wants to place the building. </param>
     /// <param name="buildingType"> The type of building that the player want to place. </param>
     /// <returns> Whether this GridPoint is eligible. </returns>
-    public bool PossibleBuildingSite(GridPoint gp, ColonyPlayer player, BuildingType buildingType)
+    public bool PossibleBuildingSite(GridPoint gp, ColonyPlayer player, BuildingType buildingType, bool free = false)
     {
         switch (buildingType)
         {
             case BuildingType.Street:
                 return PossibleStreetBuildingSite(gp, player);
             case BuildingType.Village:
-                return PossibleVillageBuildingSite(gp, player);
+                return PossibleVillageBuildingSite(gp, player, free);
             case BuildingType.City:
                 return PossibleCityBuildingSite(gp, player);
             default:
@@ -348,7 +348,7 @@ public class BoardController : MonoBehaviour
     /// <param name="gp"> The GridPoint where the player want to place the village. </param>
     /// <param name="player"> The ColonyPlayer that wants to place the village </param>
     /// <returns></returns>
-    private bool PossibleVillageBuildingSite(GridPoint gp, ColonyPlayer player)
+    public bool PossibleVillageBuildingSite(GridPoint gp, ColonyPlayer player, bool free)
 
     {
         // If there is already a building on this gridpoint, we cannot build here
@@ -359,7 +359,7 @@ public class BoardController : MonoBehaviour
         {
             // If one of our neighbours already has a village or city on it (Distance Rule), we cannot build here
             if (neighbour.building != null) { return false; }
-            if (!neighbour.HasStreetConnectionForPlayer(player)) { return false; }
+            if (!free && !neighbour.HasStreetConnectionForPlayer(player)) { return false; }
         }
     
         return true;

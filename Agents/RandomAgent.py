@@ -13,12 +13,14 @@ class RandomAgent:
     def is_done(self) -> int:
         return self.reward >= 12
 
-    def take_action(self, branch_id, obs, mask) -> np.array:
-        # zeros = np.zeros(shape=(self.action_branches[branch_id], ))  # Create an array filled with zeros
-        # random_index = np.random.randint(0, self.action_branches[branch_id])
-        # zeros[random_index] = 1
-        grid_obs = self.preprocess_grid_obs(obs=obs)
-        return np.random.randint(0, self.action_branches[branch_id])
+    def take_action(self, obs, mask) -> np.array:
+        possible_actions = []
+        for i in range(len(mask)):
+            value = mask[i]
+            if not value:
+                possible_actions.append(i)
+
+        return random.choice(possible_actions)
 
     def preprocess_grid_obs(self, obs):
         resource_obs = obs[:5]  # The resources currently in hand

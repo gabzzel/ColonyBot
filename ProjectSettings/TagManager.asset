@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Tile
   - UIController
+  - Building
   layers:
   - Default
   - TransparentFX

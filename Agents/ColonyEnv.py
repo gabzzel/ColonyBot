@@ -49,12 +49,8 @@ while not done:
 
             current_agent = agents[agent_id]
             obs = decision_steps.obs[0][0]
-            print(decision_steps.action_mask)
-            a0 = current_agent.take_action(branch_id=0, obs=obs, mask=decision_steps.action_mask)
-            a1 = current_agent.take_action(branch_id=1, obs=obs, mask=decision_steps.action_mask)
-            #print("An ", type(current_agent), " (id=", agent_id, ") action is ", str(action_first_branch))
-            #print("An ", type(current_agent), " (id=", agent_id, ") action is ", str(action_second_branch))
-            action = np.array([a0, a1], dtype=np.int32)
+            a = current_agent.take_action(obs=obs, mask=decision_steps.action_mask[0][0])
+            action = np.array(a, ndmin=1)
             env.set_action_for_agent(behavior_name=current_agent.behavior_name,
                                      agent_id=current_agent.id,
                                      action=action)
