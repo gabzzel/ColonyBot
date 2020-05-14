@@ -96,6 +96,26 @@ public class GridPoint
         return result;
     }
 
+    public List<GridPoint> GetSecondLevelConnectedByStreets(ColonyPlayer player)
+    {
+        List<GridPoint> result = new List<GridPoint>();
+        // Go through all connected gridpoints (1st level neightbours)...
+        foreach(KeyValuePair<GridPoint, Building> connection in connectedTo)
+        {
+            // If we have no street between us and our neighbour that is owned by the current player, continue
+            if(connection.Value == null || connection.Value.Owner != player) { continue; }
+
+            // If we have a valid street connection, loop through all the 2nd level neighbours...
+            foreach (KeyValuePair<GridPoint, Building> connection2 in connection.Key.connectedTo)
+            {
+                // If our neighbour's neighbour does not have a valid connection to our neighbour, continue
+                if (connection2.Value == null || connection2.Value.Owner != player) { continue; }
+                result.Add(connection2.Key);
+            }
+        }
+        return result;
+    }
+
     public List<Tile> GetNeighbouringTiles()
     {
         List<Tile> result = new List<Tile>();
@@ -141,5 +161,23 @@ public class GridPoint
         }
         return result;
     }
+
+    /// <summary>
+    /// Check if this gridpoint is eligible for village placement
+    /// </summary>
+    /// <param name="player"> The player for which to check </param>
+    /// <returns> Whether this gridpoint is eligible </returns>
+    public bool HasStreetConnectionForPlayer(ColonyPlayer player)
+    {
+        // Go through all neighbours...
+        foreach(KeyValuePair<GridPoint, Building> connection in connectedTo)
+        {
+            // If we are connected to a neighbour with a street that belongs to us, return true
+
+            if(connection.Value != null && connection.Value.Owner == player) { return true; }
+        }
+        return false;
+    }
+
 }
 

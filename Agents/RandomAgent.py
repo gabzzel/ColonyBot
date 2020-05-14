@@ -13,7 +13,7 @@ class RandomAgent:
     def is_done(self) -> int:
         return self.reward >= 12
 
-    def take_action(self, branch_id, obs) -> np.array:
+    def take_action(self, branch_id, obs, mask) -> np.array:
         # zeros = np.zeros(shape=(self.action_branches[branch_id], ))  # Create an array filled with zeros
         # random_index = np.random.randint(0, self.action_branches[branch_id])
         # zeros[random_index] = 1

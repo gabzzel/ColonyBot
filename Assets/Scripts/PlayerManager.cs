@@ -10,6 +10,11 @@ public class PlayerManager : MonoBehaviour
     public List<ColonyPlayer> players = new List<ColonyPlayer>();
     public int currentPlayer = 0;
 
+    public ColonyPlayer CurrentPlayer
+    {
+        get { return players[currentPlayer]; }
+    }
+
     public void Initialize(int numberOfPlayers)
     {
         if(numberOfPlayers < 1 || numberOfPlayers > 4)

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using static Enums;
 
 public class BoardController : MonoBehaviour
 {
@@ -305,5 +306,86 @@ public class BoardController : MonoBehaviour
         }
         if (result.Count == 0) { return null; }
         return result;
+    }
+
+
+    /// <summary>
+    /// Check whether a certain GridPoint is eligible for building some building.
+    /// </summary>
+    /// <param name="gp"> The GridPoint which to check. </param>
+    /// <param name="player"> The ColonyPlayer that wants to place the building. </param>
+    /// <param name="buildingType"> The type of building that the player want to place. </param>
+    /// <returns> Whether this GridPoint is eligible. </returns>
+    public bool PossibleBuildingSite(GridPoint gp, ColonyPlayer player, BuildingType buildingType)
+    {
+        switch (buildingType)
+        {
+            case BuildingType.Street:
+                return PossibleStreetBuildingSite(gp, player);
+            case BuildingType.Village:
+                return PossibleVillageBuildingSite(gp, player);
+            case BuildingType.City:
+                return PossibleCityBuildingSite(gp, player);
+            default:
+                return false;
+        }
+    }
+
+    private bool PossibleCityBuildingSite(GridPoint gp, ColonyPlayer player)
+    {
+        // If there is no building on this gridpoint, there is no village to replace for a city
+        if(gp.building == null) { return false; }
+        // If the building on this gridpoint is not a village, we may not replace it
+        else if(gp.building.Type != Enums.BuildingType.Village) { return false; }
+        // If the building owner is not us, we cannot replace the village
+        else if(gp.building.Owner != player) { return false; }
+        else { return true; }
+    }
+
+    /// <summary>
+    /// Check whether a certain gridpoint is eligible for Village placement by a certain player
+    /// </summary>
+    /// <param name="gp"> The GridPoint where the player want to place the village. </param>
+    /// <param name="player"> The ColonyPlayer that wants to place the village </param>
+    /// <returns></returns>
+    private bool PossibleVillageBuildingSite(GridPoint gp, ColonyPlayer player)
+
+    {
+        // If there is already a building on this gridpoint, we cannot build here
+        if(gp.building != null) { return false; }
+        
+        // Go through all neighbours
+        foreach(GridPoint neighbour in gp.GetNeighbouringGridPoints())
+        {
+            // If one of our neighbours already has a village or city on it (Distance Rule), we cannot build here
+            if (neighbour.building != null) { return false; }
+            if (!neighbour.HasStreetConnectionForPlayer(player)) { return false; }
+        }
+    
+        return true;
+    }
+
+    private bool PossibleStreetBuildingSite(GridPoint gp, ColonyPlayer player)
+    {
+        foreach(KeyValuePair<GridPoint, Building> connection in gp.connectedTo)
+        {
+            // If there is not already a street to this neighbour and our neighbour has a building owned by the player, a street can be build.
+            if(connection.Value == null && connection.Key.building != null && connection.Key.building.Owner == player)
+            {
+                return true;
+            }
+
+            // Go through our second level neighbours...
+            foreach(KeyValuePair<GridPoint, Building> connection2 in connection.Key.connectedTo)
+            {
+                // Skip this one if we are looking at the original
+                if(connection2.Key == gp) { continue; }
+                
+                // If there is a street between our neighbour and this 2nd level neighbour, return true
+                if(connection2.Value != null && connection.Value.Owner == player) { return true; }
+            }
+        }
+
+        return false;
     }
 }

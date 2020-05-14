@@ -10,7 +10,7 @@ from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfig, EngineConfigurationChannel
 from mlagents_envs.side_channel.float_properties_channel import FloatPropertiesChannel
 
-env_name = "C:\\Users\\Gabi\\Documents\\GitHub\\ColonyBot\\Builds\\ColonyBot.exe"
+env_name = "C:\\Users\\Gabi van der Kooij\\Documents\\ColonyBot\\Builds\\ColonyBot.exe"
 train_mode = True  # Whether to run the environment in training or inference mode
 
 engine_configuration_channel = EngineConfigurationChannel()
@@ -48,8 +48,10 @@ while not done:
                 agents[agent_id] = random_agent
 
             current_agent = agents[agent_id]
-            a0 = current_agent.take_action(branch_id=0, obs=decision_steps.obs[0][0])
-            a1 = current_agent.take_action(branch_id=1, obs=decision_steps.obs[0][0])
+            obs = decision_steps.obs[0][0]
+            print(decision_steps.action_mask)
+            a0 = current_agent.take_action(branch_id=0, obs=obs, mask=decision_steps.action_mask)
+            a1 = current_agent.take_action(branch_id=1, obs=obs, mask=decision_steps.action_mask)
             #print("An ", type(current_agent), " (id=", agent_id, ") action is ", str(action_first_branch))
             #print("An ", type(current_agent), " (id=", agent_id, ") action is ", str(action_second_branch))
             action = np.array([a0, a1], dtype=np.int32)

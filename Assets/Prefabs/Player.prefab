@@ -50,6 +50,7 @@ MonoBehaviour:
   MaxStep: 0
   points: 0
   color: {r: 0, g: 0, b: 1, a: 1}
+  turnPhase: 3
 --- !u!114 &5531525498888209184
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -65,7 +66,7 @@ MonoBehaviour:
   m_BrainParameters:
     VectorObservationSize: 329
     NumStackedVectorObservations: 1
-    VectorActionSize: 0400000036000000
+    VectorActionSize: a3000000
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
   m_Model: {fileID: 0}

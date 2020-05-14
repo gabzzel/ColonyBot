@@ -81,9 +81,14 @@ public class GameController : MonoBehaviour
     public void NextStep()
     {
         // Perform 1 step / round where every player gets a turn and dices are rolled before their turns
-        PerformDiceRoll();
-        pm.NextPlayer();
-        pm.RequestAction();
+        ColonyPlayer currentPlayer = pm.CurrentPlayer;
+
+        // If the current player passed last turn, roll the dice
+        if(currentPlayer.turnPhase == TurnPhase.Pass) { PerformDiceRoll(); }
+
+        // Request an action from the current player
+        currentPlayer.RequestAction();
+
         uic.UpdateStepText(Academy.Instance.StepCount);
         uic.UpdateAllPlayers(pm.players);
         Academy.Instance.EnvironmentStep();
@@ -154,21 +159,39 @@ public class GameController : MonoBehaviour
             Instantiate(villagePrefab, gp.position, Quaternion.identity, currentPlayer.transform);
         Building b = villageObject.GetComponent<Building>();
         b.Owner = currentPlayer;
+        currentPlayer.AddReward(1f);
     }
 
-    void CreateStreet(GridPoint start, GridPoint dest)
+    public void CreateStreet(GridPoint dest)
     {
-        if(start == null || dest == null)
+        if(dest == null) { Debug.LogError("Cannot create street to null GridPoint!"); return; }
+        ColonyPlayer player = pm.CurrentPlayer;
+
+        GridPoint start = null;
+
+        // Find a starting point which either has a building on it, or is connected with a street
+        foreach(KeyValuePair<GridPoint, Building> connection in dest.connectedTo)
         {
-            Debug.LogError("Cannot create street between null gridpoint(s)");
-            return;
+            if(connection.Key.building != null && connection.Key.building.Owner == player)
+            {
+                start = connection.Key;
+                break;
+            }
+            foreach(KeyValuePair<GridPoint, Building> connection2 in connection.Key.connectedTo)
+            {
+                if(connection2.Value != null && connection2.Value.Owner == player)
+                {
+                    start = connection.Key;
+                    break;
+                }
+            }
+            if(start != null) { break; }
         }
-        ColonyPlayer currentPlayer = pm.players[pm.currentPlayer]; // Get the current player
-        GameObject streetObject = Instantiate(streetPrefab, start.position - dest.position, Quaternion.identity, currentPlayer.transform); 
-        Building b = streetObject.GetComponent<Building>();
-        b.Owner = currentPlayer; // Set the owner of the street to the current player
-        start.connectedTo[dest] = b; // Connect the start to the dest with a street
-        dest.connectedTo[start] = b; // Connect the dest to the start with the same street
+
+        Vector2 position = new Vector2(dest.position.x - start.position.x, dest.position.y - start.position.y);
+        float rotation = dest.position.y > start.position.y ? 30f : -30f;
+        GameObject street = Instantiate(streetPrefab, position, Quaternion.Euler(0, 0, rotation), player.transform);
+        street.GetComponent<Building>().Owner = player;
     }
 
     void GiveResourcesToPlayers(int diceRoll)

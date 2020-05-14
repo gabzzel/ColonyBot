@@ -29,12 +29,10 @@ public static class Enums
         Ore
     }
 
-    public enum Action
+    public enum TurnPhase
     {
-        Pass,
-        BuildVillage,
-        BuildRoad,
-        BuildCity
+        Build,
+        Pass
     }
 
     public enum BuildingType
@@ -49,21 +47,26 @@ public static class Enums
     /// </summary>
     /// <param name="action"> The action of which to get the index of </param>
     /// <returns> The index / number of the action </returns>
-    public static int GetActionNumber(Action action)
+    public static int GetBuildingTypeNumber(BuildingType buildingType)
     {
-        List<Action> actions = Enum.GetValues(typeof(Action)).Cast<Action>().ToList();
-        return actions.IndexOf(action);
+        List<BuildingType> actions = Enum.GetValues(typeof(BuildingType)).Cast<BuildingType>().ToList();
+        return actions.IndexOf(buildingType);
     }
 
-    public static Action GetActionByNumber(int i)
+    /// <summary>
+    /// Get the building type by index.
+    /// </summary>
+    /// <param name="i"> The index of the building type in the enum </param>
+    /// <returns> The corresponding building type </returns>
+    public static BuildingType GetBuildingTypeByNumber(int i)
     {
-        List<Action> actions = Enum.GetValues(typeof(Action)).Cast<Action>().ToList();
-        return actions[i];
+        List<BuildingType> types = Enum.GetValues(typeof(BuildingType)).Cast<BuildingType>().ToList();
+        return types[i];
     }
 
-    public static Action GetAction(float[] array)
+    public static BuildingType GetAction(float[] array)
     {
-        if (array.Length != Enum.GetValues(typeof(Action)).Cast<Action>().ToArray().Length)
+        if (array.Length != Enum.GetValues(typeof(BuildingType)).Cast<BuildingType>().ToArray().Length)
         {
             throw new Exception("Cannot convert array to action: Length mismatch");
         }
@@ -71,10 +74,10 @@ public static class Enums
         {
             if (array[i] >= 1)
             {
-                return GetActionByNumber(i);
+                return GetBuildingTypeByNumber(i);
             }
         }
-        return Action.Pass;
+        return BuildingType.Village;
     }
 
     public static List<Resource> GetResourcesAsList(bool includeNone = false)
