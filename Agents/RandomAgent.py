@@ -1,6 +1,18 @@
 import random
 import numpy as np
 
+
+def action_to_string(action):
+    if action == 0:
+        return "Pass"
+    elif action % 3 == 1:
+        return "Street"
+    elif action % 3 == 2:
+        return "Village"
+    else:
+        return "City"
+
+
 class RandomAgent:
     def __init__(self, id, behavior_name, action_branches, obs_shape):
         self.reward = 0

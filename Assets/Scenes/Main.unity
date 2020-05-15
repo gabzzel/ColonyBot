@@ -217,9 +217,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 1200194118}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &12354568
 GameObject:
   m_ObjectHideFlags: 0
@@ -316,9 +313,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 395225322}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &32424496
 GameObject:
   m_ObjectHideFlags: 0
@@ -415,9 +409,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 663682173}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1001 &44425962
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -878,9 +869,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 976541739}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &239158990
 GameObject:
   m_ObjectHideFlags: 0
@@ -1057,10 +1045,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c2b7f86714aaf94e98b633739591f04, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  DesertTile: {fileID: 21300000, guid: d9857d6ea859a044a8e37c780951e679, type: 3}
+  OreTile: {fileID: 21300000, guid: 23da176464fbaa44ebb57a6e58d0aaa5, type: 3}
+  StoneTile: {fileID: 21300000, guid: 52b68c02d41d62b43b6d9bf0e0142a1c, type: 3}
+  GrainTile: {fileID: 21300000, guid: 4c18fbbb9ebb11246a1252363888635b, type: 3}
+  WoodTile: {fileID: 21300000, guid: 5cf494a0d14fab5469399cde86797441, type: 3}
+  WoolTile: {fileID: 21300000, guid: d09ad757e9d52f643af2d8a5dcd2df70, type: 3}
   offset: {x: 180, y: 150}
   tilePrefab: {fileID: 5346649427322769310, guid: 34dc6639b56bca449a637d18720687de,
     type: 3}
-  gridPointIndicator: {fileID: 5819095212645616432, guid: 6356894a16d09cd4bb49cd85b86c6f6d,
+  gridPointIndicator: {fileID: 5099529142434909208, guid: 6356894a16d09cd4bb49cd85b86c6f6d,
     type: 3}
   board: {fileID: 823868101}
   tiles:
@@ -1085,6 +1079,7 @@ MonoBehaviour:
   - {fileID: 786028784}
   useStandard: 0
   allowHighChanceNeighbours: 0
+  drawGridPointIndicators: 0
 --- !u!114 &330755334
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1620,9 +1615,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 1145818449}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &513483672
 GameObject:
   m_ObjectHideFlags: 0
@@ -1868,9 +1860,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 771862133}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &663682171
 GameObject:
   m_ObjectHideFlags: 0
@@ -2070,9 +2059,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 78002130}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!4 &786028785
 Transform:
   m_ObjectHideFlags: 0
@@ -2234,9 +2220,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 123105979}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &787640511
 GameObject:
   m_ObjectHideFlags: 0
@@ -2333,9 +2316,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 1562511120}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &800122310
 GameObject:
   m_ObjectHideFlags: 0
@@ -2559,9 +2539,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 1491887802}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &862251908
 GameObject:
   m_ObjectHideFlags: 0
@@ -2814,9 +2791,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 1272115762}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!114 &895851876 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
@@ -2925,9 +2899,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 862251910}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &976541737
 GameObject:
   m_ObjectHideFlags: 0
@@ -3102,9 +3073,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 1508237079}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &983618647
 GameObject:
   m_ObjectHideFlags: 0
@@ -3695,9 +3663,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 886120691}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &1200194116
 GameObject:
   m_ObjectHideFlags: 0
@@ -3793,7 +3758,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1224460964
 Transform:
   m_ObjectHideFlags: 0
@@ -3848,7 +3813,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 3bc41b4b1a3111945acddd5d9fafcb6b, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 52b68c02d41d62b43b6d9bf0e0142a1c, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -3872,9 +3837,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 1611380438}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!114 &1236292668 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
@@ -6005,9 +5967,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 362567498}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &1611380436
 GameObject:
   m_ObjectHideFlags: 0
@@ -6445,9 +6404,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 49726500}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &1739007661
 GameObject:
   m_ObjectHideFlags: 0
@@ -6772,9 +6728,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 2026732931}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &1875229915
 GameObject:
   m_ObjectHideFlags: 0
@@ -6945,9 +6898,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 1039799894}
-  resource: 0
-  number: 0
-  value: 0
 --- !u!1 &1935875019
 GameObject:
   m_ObjectHideFlags: 0
@@ -7632,11 +7582,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
-        type: 3}
-      propertyPath: turnPhase
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209188, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
       propertyPath: m_Name

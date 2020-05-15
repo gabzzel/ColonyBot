@@ -91,8 +91,8 @@ public class GameController : MonoBehaviour
         if(initialPlayers.Count > 0)
         {
             pm.currentPlayer = initialPlayers[initialPlayers.Count - 1];
-            initialPlayers.RemoveAt(initialPlayers.Count - 1);
             pm.CurrentPlayer.RequestDecision();
+            initialPlayers.RemoveAt(initialPlayers.Count - 1);
         }
         else
         {
@@ -119,6 +119,7 @@ public class GameController : MonoBehaviour
         for (int i = 0; i < numberOfPlayers; i++)
         {
             int value = (i + r) % numberOfPlayers;
+            firstHalf.Add(value);
             firstHalf.Add(value);
         }
         List<int> secondHalf = new List<int>(firstHalf);
@@ -147,20 +148,17 @@ public class GameController : MonoBehaviour
         return dice1 + dice2;
     }
 
-    public Building CreateVillageOrCity(GridPoint gp, bool city, ColonyPlayer cp)
+    public Building CreateVillageOrCity(NonTileGridPoint ntgp, bool city, ColonyPlayer cp)
     {
-        if(gp == null)
-        {
-            Debug.LogWarning("Cannot create village on null Gridpoint!");
-            return null;
-        }
+        if(ntgp == null) { throw new System.Exception("Cannot create village on null Gridpoint!"); }
         GameObject villageObject = city ? 
-            Instantiate(cityPrefab, gp.position, Quaternion.identity, cp.transform) : 
-            Instantiate(villagePrefab, gp.position, Quaternion.identity, cp.transform);
-        Building b = villageObject.GetComponent<Building>();
-        b.Owner = cp;
+            Instantiate(cityPrefab, ntgp.position, Quaternion.identity, cp.transform) : 
+            Instantiate(villagePrefab, ntgp.position, Quaternion.identity, cp.transform);
+        Building building = villageObject.GetComponent<Building>();
+        building.Owner = cp;
+        ntgp.Building = building;
         cp.AddReward(1f);
-        return b;
+        return building;
     }
 
     /// <summary>
@@ -168,35 +166,26 @@ public class GameController : MonoBehaviour
     /// </summary>
     /// <param name="dest"> Where the street will go to. </param>
     /// <param name="cp"> For which player the street will be build </param>
-    public void CreateStreet(GridPoint dest, ColonyPlayer cp)
+    public void CreateStreet(NonTileGridPoint dest, ColonyPlayer cp, NonTileGridPoint start = null)
     {
-        if(dest == null) { Debug.LogError("Cannot create street to null GridPoint!"); return; }
+        if(dest == null) { throw new System.Exception("Cannot create street to null GridPoint!"); }
 
-        GridPoint start = null;
+        start = dest.FindConnectionWithPlayer(cp);
 
-        // Find a starting point which either has a building on it, or is connected with a street to the destination
-        foreach(KeyValuePair<GridPoint, Building> connection in dest.connectedTo)
+        if(start == null) { throw new System.Exception("Cannot build a street from nowhere..."); }
+
+        Vector2 position = new Vector2((dest.position.x - start.position.x) / 2f, (dest.position.y - start.position.y) / 2f) + start.position;
+        float rotation = 90f;
+        if(dest.position.x < start.position.x && start.position.y < dest.position.y || start.position.y > dest.position.y && dest.position.x > start.position.x) { rotation = -30f; }
+        else if(dest.position.x > start.position.x && start.position.y < dest.position.y || start.position.y > dest.position.y && start.position.x > dest.position.x)
         {
-            if(connection.Key.building != null && connection.Key.building.Owner == cp)
-            {
-                start = connection.Key;
-                break;
-            }
-            foreach(KeyValuePair<GridPoint, Building> connection2 in connection.Key.connectedTo)
-            {
-                if(connection2.Value != null && connection2.Value.Owner == cp)
-                {
-                    start = connection.Key;
-                    break;
-                }
-            }
-            if(start != null) { break; }
+            rotation = 30f;
         }
-
-        Vector2 position = new Vector2(dest.position.x - start.position.x, dest.position.y - start.position.y);
-        float rotation = dest.position.y > start.position.y ? 30f : -30f;
         GameObject street = Instantiate(streetPrefab, position, Quaternion.Euler(0, 0, rotation), cp.transform);
-        street.GetComponent<Building>().Owner = cp;
+        Building b = street.GetComponent<Building>();
+        b.Owner = cp;
+        dest.Connect(start, b);
+        start.Connect(dest, b);
     }
 
     void GiveResourcesToPlayers(int diceRoll)
@@ -204,14 +193,14 @@ public class GameController : MonoBehaviour
         List<Tile> relevantTiles = bc.GetTilesByNumber(diceRoll); // Get the tiles with this number
         foreach(Tile t in relevantTiles)
         {
-            List<GridPoint> neighbouringGridPoints = t.gridPoint.GetNeighbouringGridPoints(); // Get all tiles where there is possibly a building
-            foreach(GridPoint gp in neighbouringGridPoints)
+            HashSet<NonTileGridPoint> neighbouringGridPoints = t.GridPoint.ConnectedNTGPs; // Get all tiles where there is possibly a building
+            foreach(NonTileGridPoint ntgp in neighbouringGridPoints)
             {
-                if(gp.building != null)
+                if(ntgp.Building != null)
                 {
-                    Building b = gp.building;
+                    Building b = ntgp.Building;
                     int number = b.Type == BuildingType.Village ? 1 : 2;
-                    b.Owner.GiveResources(t.resource, number);
+                    b.Owner.GiveResources(t.Resource, number);
                 }
             }
         }

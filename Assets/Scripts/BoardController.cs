@@ -5,16 +5,28 @@ using static Enums;
 
 public class BoardController : MonoBehaviour
 {
+    [Header("Tile Sprites")]
+    [SerializeField] Sprite DesertTile = null;
+    [SerializeField] Sprite OreTile = null;
+    [SerializeField] Sprite StoneTile = null;
+    [SerializeField] Sprite GrainTile = null;
+    [SerializeField] Sprite WoodTile = null;
+    [SerializeField] Sprite WoolTile = null;
+    
     [SerializeField] private Vector2 offset = Vector2.zero;
 
     [SerializeField] private GameObject tilePrefab = null;
     [SerializeField] private GameObject gridPointIndicator = null;
     [SerializeField] private GameObject board = null;
-    public Dictionary<Vector2Int, GridPoint> gridPoints = new Dictionary<Vector2Int, GridPoint>();
+    public Dictionary<Vector2Int, GridPoint> allGridPoints = new Dictionary<Vector2Int, GridPoint>();
+    public List<NonTileGridPoint> nonTileGridPoints = new List<NonTileGridPoint>();
+    public List<TileGridPoint> tileGridPoints = new List<TileGridPoint>();
+
     [SerializeField] private List<Tile> tiles = new List<Tile>();
 
     public bool useStandard = false;
     public bool allowHighChanceNeighbours = false;
+    public bool drawGridPointIndicators = true;
 
     List<Enums.Resource> standardResources = new List<Enums.Resource>
         {
@@ -45,6 +57,7 @@ public class BoardController : MonoBehaviour
         CreateEmptyBoard();
         DistributeResources();
         DistributeNumbers();
+        ConnectGridPoints();
     }
 
     void DistributeResources()
@@ -53,13 +66,14 @@ public class BoardController : MonoBehaviour
         {
             for (int i = 0; i < tiles.Count; i++)
             {
-                tiles[i].GetComponent<Tile>().SetResource(standardResources[i]);
+                Resource res = standardResources[i];
+                tiles[i].GetComponent<Tile>().SetResource(res, GetSpriteByResource(res));
             }
         }
         else
         {
             List<int> indexes = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18 };
-            tiles[9].SetResource(Enums.Resource.None);
+            tiles[9].SetResource(Enums.Resource.None, DesertTile);
 
             // Go trough all tiles
             for (int i = 0; i < tiles.Count; i++)
@@ -69,7 +83,7 @@ public class BoardController : MonoBehaviour
                     int r = Random.Range(0, indexes.Count); // Get a random index
                     int index = indexes[r]; // Get the index of the resources
                     Enums.Resource res = standardResources[index]; // The random resource
-                    tiles[i].SetResource(res);
+                    tiles[i].SetResource(res, GetSpriteByResource(res));
                     indexes.RemoveAt(r);
                 }
             }
@@ -133,11 +147,11 @@ public class BoardController : MonoBehaviour
         foreach (Tile t in tiles)
         {
             // If this tile has a high chance of being rolled...
-            if (t.number == 6 || t.number == 8)
+            if (t.Number == 6 || t.Number == 8)
             {
                 foreach (Tile neighbour in t.GetNeighbouringTiles())
                 {
-                    if (neighbour.number == 6 || neighbour.number == 8)
+                    if (neighbour.Number == 6 || neighbour.Number == 8)
                     {
                         return true;
                     }
@@ -157,17 +171,9 @@ public class BoardController : MonoBehaviour
         // 2. Create the grid points
         CreateGridPoints();
         // 3. Connect the grid points to their neighbours
-        ConnectGridPoints();
+        // ConnectGridPoints();
         // 4. Create the tiles objects and link them to the correct GridPoints
         CreateTiles();
-
-
-        int number = 0;
-        foreach(GridPoint p in gridPoints.Values)
-        {
-            if (!p.isMiddle) { number++; }
-        }
-        Debug.Log(number);
     }
 
     void Clear()
@@ -180,12 +186,12 @@ public class BoardController : MonoBehaviour
         }
         // Clear the Lists etc.
         tiles.Clear();
-        gridPoints.Clear();
+        allGridPoints.Clear();
     }
 
     void CreateGridPoints()
     {
-        if (gridPoints.Count > 0) { gridPoints.Clear(); }
+        if (allGridPoints.Count > 0) { allGridPoints.Clear(); }
         // Als x = Round(diagonal / 2), dan moet y tot diagonal gaan
         // Als x = 0, dan moet y tot 3 gaan
         // Als x = diagonal, dan moet y ook tot 3
@@ -222,10 +228,26 @@ public class BoardController : MonoBehaviour
         float x = col * 1.5f / Mathf.Sqrt(3);
         Vector2 globalPos = new Vector2(x * tilePrefab.transform.lossyScale.x / 2, y * tilePrefab.transform.lossyScale.y / 2) + offset;
         Vector2Int colRow = new Vector2Int(col, row);
-        //GameObject g = Instantiate(gridPointIndicator, globalPos, Quaternion.identity);
-        //g.name = "GridPoint " + colRow;
-        GridPoint gp = new GridPoint(globalPos, colRow);
-        gridPoints.Add(colRow, gp);
+
+        if (drawGridPointIndicators)
+        {
+            GameObject g = Instantiate(gridPointIndicator, globalPos, Quaternion.identity);
+            g.name = "GridPoint " + colRow;
+            g.transform.GetChild(0).GetChild(0).GetComponent<UnityEngine.UI.Text>().text = colRow.ToString();
+        }
+        
+        if ((colRow.x % 2 == 1 && (colRow.y + 1) % 3 == 0) || (colRow.x % 2 == 0 && (colRow.y - 1) % 3 == 0))
+        {
+            TileGridPoint tgp = new TileGridPoint(globalPos, colRow);
+            tileGridPoints.Add(tgp);
+            allGridPoints.Add(colRow, tgp);
+        }
+        else
+        {
+            NonTileGridPoint ntgp = new NonTileGridPoint(globalPos, colRow);
+            nonTileGridPoints.Add(ntgp);
+            allGridPoints.Add(colRow, ntgp);
+        } 
     }
 
     /// <summary>
@@ -236,23 +258,42 @@ public class BoardController : MonoBehaviour
         Vector2Int[] connections = new Vector2Int[]
         {
             new Vector2Int(0, 1), // Above
-            new Vector2Int(-1, 0), // Up left 
-            new Vector2Int(-1, -1), // Below left
+            new Vector2Int(1, 0), // Right up 
+            new Vector2Int(1, -1), // Right low
             new Vector2Int(0, -1), // Below
-            new Vector2Int(1, -1), // Below right
-            new Vector2Int(1, 0), // Up right
+            new Vector2Int(-1, -1), // Left low
+            new Vector2Int(-1, 0), // Left up
         };
 
-        foreach (GridPoint gp in gridPoints.Values)
+        foreach(NonTileGridPoint ntgp in nonTileGridPoints)
         {
-            GridPoint connectTo = null;
-            foreach (Vector2Int conn in connections)
+            // Connect the NonTileGridPoints to TileGridPoints and back
+            foreach(TileGridPoint possibleTileNeighbour in tileGridPoints)
             {
-                if (gridPoints.TryGetValue(gp.colRow + conn, out connectTo))
+                foreach(Vector2Int searchDirection in connections)
                 {
-                    gp.connectedTo.Add(connectTo, null);
+                    Vector2Int positionToCheckFor = ntgp.colRow + searchDirection;
+                    if(possibleTileNeighbour.colRow == positionToCheckFor)
+                    {
+                        ntgp.Connect(possibleTileNeighbour);
+                        possibleTileNeighbour.Connect(ntgp);
+                    }
                 }
             }
+            // Connect the NonTileGridPoints to NonTileGridPoints
+            foreach(NonTileGridPoint possibleNonTileNeighbour in nonTileGridPoints)
+            {
+                foreach(Vector2Int searchDirection in connections)
+                {
+                    Vector2Int positionToCheckFor = ntgp.colRow + searchDirection;
+                    if (possibleNonTileNeighbour.colRow == positionToCheckFor)
+                    {
+                        ntgp.Connect(possibleNonTileNeighbour);
+                        possibleNonTileNeighbour.Connect(ntgp);
+                    }
+                }
+            }
+            
         }
     }
 
@@ -268,16 +309,14 @@ public class BoardController : MonoBehaviour
     void CreateTiles()
     {
         tiles.Clear();
-        foreach (GridPoint gp in gridPoints.Values)
+        foreach (TileGridPoint tgp in tileGridPoints)
         {
-            if (gp.isMiddle)
-            {
-                GameObject tileObject = Instantiate(tilePrefab, gp.position, tilePrefab.transform.rotation, board.transform);
-                tileObject.name = "Tile " + (tiles.Count + 1) + " @ " + gp.colRow.ToString();
-                Tile tile = tileObject.GetComponent<Tile>();
-                gp.SetTile(tile);
-                tiles.Add(tile);
-            }
+            GameObject tileObject = Instantiate(tilePrefab, tgp.position, tilePrefab.transform.rotation, board.transform);
+            tileObject.name = "Tile " + (tiles.Count + 1) + " @ " + tgp.colRow.ToString();
+            Tile tile = tileObject.GetComponent<Tile>();
+            tgp.Tile = tile;
+            tile.GridPoint = tgp;
+            tiles.Add(tile);
         }
     }
 
@@ -286,7 +325,7 @@ public class BoardController : MonoBehaviour
         List<Tile> result = new List<Tile>();
         foreach (Tile t in tiles)
         {
-            if (t.number == number)
+            if (t.Number == number)
             {
                 result.Add(t);
             }
@@ -294,20 +333,16 @@ public class BoardController : MonoBehaviour
         return result;
     }
 
-    public List<GridPoint> GetGridPointsWithBuildingOfPlayer(ColonyPlayer player)
+    public HashSet<NonTileGridPoint> GetGridPointsWithBuildingOfPlayer(ColonyPlayer player)
     {
-        List<GridPoint> result = new List<GridPoint>();
-        foreach (GridPoint gp in gridPoints.Values)
+        HashSet<NonTileGridPoint> result = new HashSet<NonTileGridPoint>();
+        foreach (NonTileGridPoint gp in nonTileGridPoints)
         {
-            if (gp.building != null && gp.building.Owner == player)
-            {
-                result.Add(gp);
-            }
+            if (gp.OccupiedBy(player)) { result.Add(gp); }
         }
         if (result.Count == 0) { return null; }
         return result;
     }
-
 
     /// <summary>
     /// Check whether a certain GridPoint is eligible for building some building.
@@ -316,7 +351,7 @@ public class BoardController : MonoBehaviour
     /// <param name="player"> The ColonyPlayer that wants to place the building. </param>
     /// <param name="buildingType"> The type of building that the player want to place. </param>
     /// <returns> Whether this GridPoint is eligible. </returns>
-    public bool PossibleBuildingSite(GridPoint gp, ColonyPlayer player, BuildingType buildingType, bool free = false)
+    public bool PossibleBuildingSite(NonTileGridPoint gp, ColonyPlayer player, BuildingType buildingType, bool free = false)
     {
         switch (buildingType)
         {
@@ -331,14 +366,14 @@ public class BoardController : MonoBehaviour
         }
     }
 
-    private bool PossibleCityBuildingSite(GridPoint gp, ColonyPlayer player)
+    private bool PossibleCityBuildingSite(NonTileGridPoint gp, ColonyPlayer player)
     {
         // If there is no building on this gridpoint, there is no village to replace for a city
-        if(gp.building == null) { return false; }
+        if(gp.Building == null) { return false; }
         // If the building on this gridpoint is not a village, we may not replace it
-        else if(gp.building.Type != Enums.BuildingType.Village) { return false; }
+        else if(gp.Building.Type != Enums.BuildingType.Village) { return false; }
         // If the building owner is not us, we cannot replace the village
-        else if(gp.building.Owner != player) { return false; }
+        else if(gp.Building.Owner != player) { return false; }
         else { return true; }
     }
 
@@ -348,44 +383,46 @@ public class BoardController : MonoBehaviour
     /// <param name="gp"> The GridPoint where the player want to place the village. </param>
     /// <param name="player"> The ColonyPlayer that wants to place the village </param>
     /// <returns></returns>
-    public bool PossibleVillageBuildingSite(GridPoint gp, ColonyPlayer player, bool free)
+    public bool PossibleVillageBuildingSite(NonTileGridPoint gp, ColonyPlayer player, bool free)
 
     {
         // If there is already a building on this gridpoint, we cannot build here
-        if(gp.building != null) { return false; }
+        if(gp.Building != null) { return false; }
         
         // Go through all neighbours
-        foreach(GridPoint neighbour in gp.GetNeighbouringGridPoints())
+        foreach(NonTileGridPoint neighbour in gp.ConnectedNTGPs.Keys)
         {
             // If one of our neighbours already has a village or city on it (Distance Rule), we cannot build here
-            if (neighbour.building != null) { return false; }
+            if (neighbour.Building != null) { return false; }
             if (!free && !neighbour.HasStreetConnectionForPlayer(player)) { return false; }
         }
     
         return true;
     }
 
-    private bool PossibleStreetBuildingSite(GridPoint gp, ColonyPlayer player)
+    private bool PossibleStreetBuildingSite(NonTileGridPoint gp, ColonyPlayer player)
     {
-        foreach(KeyValuePair<GridPoint, Building> connection in gp.connectedTo)
+        return gp.FindConnectionWithPlayer(player) != null;
+    }
+
+    private Sprite GetSpriteByResource(Resource res)
+    {
+        switch (res)
         {
-            // If there is not already a street to this neighbour and our neighbour has a building owned by the player, a street can be build.
-            if(connection.Value == null && connection.Key.building != null && connection.Key.building.Owner == player)
-            {
-                return true;
-            }
-
-            // Go through our second level neighbours...
-            foreach(KeyValuePair<GridPoint, Building> connection2 in connection.Key.connectedTo)
-            {
-                // Skip this one if we are looking at the original
-                if(connection2.Key == gp) { continue; }
-                
-                // If there is a street between our neighbour and this 2nd level neighbour, return true
-                if(connection2.Value != null && connection.Value.Owner == player) { return true; }
-            }
+            case Resource.None:
+                return DesertTile;
+            case Resource.Wood:
+                return WoodTile;
+            case Resource.Stone:
+                return StoneTile;
+            case Resource.Wool:
+                return WoolTile;
+            case Resource.Grain:
+                return GrainTile;
+            case Resource.Ore:
+                return OreTile;
+            default:
+                return null;
         }
-
-        return false;
     }
 }

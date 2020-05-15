@@ -50,7 +50,7 @@ MonoBehaviour:
   MaxStep: 0
   points: 0
   color: {r: 0, g: 0, b: 1, a: 1}
-  turnPhase: 3
+  turnPhase: 1
 --- !u!114 &5531525498888209184
 MonoBehaviour:
   m_ObjectHideFlags: 0

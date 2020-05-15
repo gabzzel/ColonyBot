@@ -8,8 +8,12 @@ public class GridPoint
 {
     public Vector2 position = Vector2.zero;
     public Vector2Int colRow = Vector2Int.zero;
+
+    /*
+
     public bool isMiddle = false;
     public Dictionary<GridPoint, Building> connectedTo = new Dictionary<GridPoint, Building>();
+    public List<GridPoint> connectedTileGridPoints = new List<GridPoint>();
     public Dictionary<Resource, float> resourceValues = new Dictionary<Resource, float>();
     public Building building = null;
     private Tile tile = null;
@@ -71,6 +75,16 @@ public class GridPoint
     public List<GridPoint> GetNeighbouringGridPoints()
     {   
         return connectedTo.Keys.ToList();
+    }
+
+    public List<GridPoint> GetNonMiddleNeighbours()
+    {
+        List<GridPoint> neighbours = new List<GridPoint>();
+        foreach(GridPoint gp in connectedTo.Keys)
+        {
+            if (!gp.isMiddle) { neighbours.Add(gp); }
+        }
+        return neighbours;
     }
 
     /// <summary>
@@ -178,6 +192,8 @@ public class GridPoint
         }
         return false;
     }
+
+    */
 
 }
 

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public static class Enums
 {
-    public static Dictionary<Resource, int> DefaultResDict
+    public static Dictionary<Resource, int> DefaultResDictInt
     {
         get
         {
@@ -18,6 +18,20 @@ public static class Enums
             };
         }
     }  
+    public static Dictionary<Resource, float> DefaultResDictFloat
+    {
+        get
+        {
+            return new Dictionary<Resource, float>()
+            {
+                {Resource.Wood, 0f },
+                {Resource.Stone, 0f },
+                {Resource.Wool, 0f },
+                {Resource.Grain, 0f },
+                {Resource.Ore, 0f }
+            };
+        }
+    }
 
     public enum Resource
     {

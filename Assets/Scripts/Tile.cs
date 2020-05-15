@@ -1,32 +1,34 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using static Enums;
 
 [System.Serializable]
 public class Tile : MonoBehaviour
 {
     [SerializeField] private Text text = null;
-    public Enums.Resource resource = Enums.Resource.None;
-    public int number = 0;
-    public float value = 0;
-    public GridPoint gridPoint = null;
+    private Resource resource = Resource.None;
+    private int number = 0;
+    private float value = 0f;
+    private TileGridPoint gridPoint = null;
 
-    public void SetGridPoint(GridPoint gp)
+    public TileGridPoint GridPoint
     {
-        this.gridPoint = gp;
+        get { return gridPoint; }
+        set
+        {
+            if(gridPoint == null) { gridPoint = value; }
+        }
     }
+    public Resource Resource { get { return resource; } }
+    public int Number { get { return number; } }
+    public float Value { get { return value; } }
 
-    public void InitializeTile(Enums.Resource resource, int number)
-    {
-        this.SetResource(resource);
-        this.SetNumber(number);
-        text = transform.GetChild(0).GetComponent<Text>();
-    }
-
-    public void SetResource(Enums.Resource res)
+    public void SetResource(Resource res, Sprite sprite)
     {
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
-
+        sr.sprite = sprite;
+        /*
         switch (res)
         {
             case Enums.Resource.None:
@@ -50,7 +52,7 @@ public class Tile : MonoBehaviour
             default:
                 break;
         }
-
+        */ 
         resource = res;
     }
 
@@ -74,7 +76,6 @@ public class Tile : MonoBehaviour
             }
 
             this.value = (6f - Mathf.Abs(7f - number)) / 36f;
-            this.gridPoint.UpdateNeighbourValues();
         }
         else
         {
@@ -86,17 +87,14 @@ public class Tile : MonoBehaviour
     {
         List<Tile> result = new List<Tile>();
 
-        // Get all first level neighbours
-        foreach(GridPoint gp in gridPoint.GetNeighbouringGridPoints())
+        // Get all connected NonTileGridPoints
+        foreach(NonTileGridPoint ntgp in gridPoint.ConnectedNTGPs)
         {
             // Get all second level neighbours
-            foreach(GridPoint gp2 in gp.GetNeighbouringGridPoints())
+            foreach(TileGridPoint tgp in ntgp.ConnectedTGPs)
             {
                 // If we are not looking at ourselves and it has a tile...
-                if(gp2 != gridPoint && gp2.isMiddle)
-                {
-                    result.Add(gp2.GetTile());
-                }
+                if(tgp != gridPoint) { result.Add(tgp.Tile); }
                 
             }
         }

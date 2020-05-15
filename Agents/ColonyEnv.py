@@ -4,7 +4,9 @@ import numpy as np
 import sys
 import random
 import math
-from RandomAgent import RandomAgent
+
+import RandomAgent
+from RandomAgent import RandomAgent as ra
 
 from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfig, EngineConfigurationChannel
@@ -41,7 +43,7 @@ while not done:
             #print(decision_steps.obs[0][0])
             # Create a new agent if no agent exists
             if agents.keys().__contains__(agent_id) is False:
-                random_agent = RandomAgent(id=agent_id,
+                random_agent = ra(id=agent_id,
                                            behavior_name=name,
                                            action_branches=branch_shapes,
                                            obs_shape=behaviour_spec.observation_shapes[0])
@@ -49,8 +51,11 @@ while not done:
 
             current_agent = agents[agent_id]
             obs = decision_steps.obs[0][0]
-            a = current_agent.take_action(obs=obs, mask=decision_steps.action_mask[0][0])
+            mask = decision_steps.action_mask[0][0]
+            #print(mask)
+            a = current_agent.take_action(obs=obs, mask=mask)
             action = np.array(a, ndmin=1)
+            print(RandomAgent.action_to_string(a))
             env.set_action_for_agent(behavior_name=current_agent.behavior_name,
                                      agent_id=current_agent.id,
                                      action=action)

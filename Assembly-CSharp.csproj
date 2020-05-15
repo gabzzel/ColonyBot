@@ -69,10 +69,12 @@
     <Compile Include="Assets\Scripts\Enums.cs" />
     <Compile Include="Assets\Scripts\GameController.cs" />
     <Compile Include="Assets\Scripts\GridPoint.cs" />
+    <Compile Include="Assets\Scripts\NonTileGridPoint.cs" />
     <Compile Include="Assets\Scripts\Notifier.cs" />
     <Compile Include="Assets\Scripts\PlayerManager.cs" />
     <Compile Include="Assets\Scripts\PlayerUI.cs" />
     <Compile Include="Assets\Scripts\Tile.cs" />
+    <Compile Include="Assets\Scripts\TileGridPoint.cs" />
     <Compile Include="Assets\Scripts\UIController.cs" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>C:/Users/Gabi van der Kooij/Documents/ColonyBot/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
