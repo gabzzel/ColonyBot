@@ -1,10 +1,11 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEditor;
 using static Enums;
 
 public class BoardController : MonoBehaviour
 {
+    public static BoardController singleton = null;
+
     [Header("Tile Sprites")]
     [SerializeField] Sprite DesertTile = null;
     [SerializeField] Sprite OreTile = null;
@@ -51,6 +52,12 @@ public class BoardController : MonoBehaviour
             Enums.Resource.Wool
         };
     List<int> standardNumbers = new List<int> { 9, 3, 2, 3, 8, 4, 5, 5, 6, 0, 6, 10, 12, 11, 8, 9, 11, 4, 10 };
+
+    private void Awake()
+    {
+        if(singleton == null) { singleton = this; }
+        else { Destroy(this); }
+    }
 
     public void CreateFilledBoard()
     {
@@ -255,45 +262,52 @@ public class BoardController : MonoBehaviour
     /// </summary>
     void ConnectGridPoints()
     {
-        Vector2Int[] connections = new Vector2Int[]
+        Vector2Int[] tgpConnections = new Vector2Int[]
         {
             new Vector2Int(0, 1), // Above
-            new Vector2Int(1, 0), // Right up 
-            new Vector2Int(1, -1), // Right low
+            new Vector2Int(1, 1), // Right up 
+            new Vector2Int(1, 0), // Right low
             new Vector2Int(0, -1), // Below
-            new Vector2Int(-1, -1), // Left low
-            new Vector2Int(-1, 0), // Left up
+            new Vector2Int(-1, 0), // Left low
+            new Vector2Int(-1, 1), // Left up
+        };
+        Vector2Int[] ntgpConnections = new Vector2Int[]
+        {
+            new Vector2Int(0,1),
+            new Vector2Int(-1,0),
+            new Vector2Int(1,0)
         };
 
+        // Connect NTGP's to their NTGP neighbours
         foreach(NonTileGridPoint ntgp in nonTileGridPoints)
         {
-            // Connect the NonTileGridPoints to TileGridPoints and back
-            foreach(TileGridPoint possibleTileNeighbour in tileGridPoints)
+            foreach(NonTileGridPoint ntgp2 in nonTileGridPoints)
             {
-                foreach(Vector2Int searchDirection in connections)
+                foreach(Vector2Int dir in ntgpConnections)
                 {
-                    Vector2Int positionToCheckFor = ntgp.colRow + searchDirection;
-                    if(possibleTileNeighbour.colRow == positionToCheckFor)
+                    if(ntgp2.colRow == ntgp.colRow + dir)
                     {
-                        ntgp.Connect(possibleTileNeighbour);
-                        possibleTileNeighbour.Connect(ntgp);
+                        ntgp.Connect(ntgp2);
+                        ntgp2.Connect(ntgp);
                     }
                 }
             }
-            // Connect the NonTileGridPoints to NonTileGridPoints
-            foreach(NonTileGridPoint possibleNonTileNeighbour in nonTileGridPoints)
+        }
+
+        // Connect TGP's to their NTGP neighbours
+        foreach(TileGridPoint tgp in tileGridPoints)
+        {
+            foreach(NonTileGridPoint ntgp in nonTileGridPoints)
             {
-                foreach(Vector2Int searchDirection in connections)
+                foreach(Vector2Int dir in tgpConnections)
                 {
-                    Vector2Int positionToCheckFor = ntgp.colRow + searchDirection;
-                    if (possibleNonTileNeighbour.colRow == positionToCheckFor)
+                    if(ntgp.colRow == tgp.colRow + dir)
                     {
-                        ntgp.Connect(possibleNonTileNeighbour);
-                        possibleNonTileNeighbour.Connect(ntgp);
+                        ntgp.Connect(tgp);
+                        tgp.Connect(ntgp);
                     }
                 }
             }
-            
         }
     }
 
@@ -350,6 +364,7 @@ public class BoardController : MonoBehaviour
     /// <param name="gp"> The GridPoint which to check. </param>
     /// <param name="player"> The ColonyPlayer that wants to place the building. </param>
     /// <param name="buildingType"> The type of building that the player want to place. </param>
+    /// <param name="free"> If the buildingtype is village, can we place it wherever we want? </param>
     /// <returns> Whether this GridPoint is eligible. </returns>
     public bool PossibleBuildingSite(NonTileGridPoint gp, ColonyPlayer player, BuildingType buildingType, bool free = false)
     {
@@ -384,7 +399,6 @@ public class BoardController : MonoBehaviour
     /// <param name="player"> The ColonyPlayer that wants to place the village </param>
     /// <returns></returns>
     public bool PossibleVillageBuildingSite(NonTileGridPoint gp, ColonyPlayer player, bool free)
-
     {
         // If there is already a building on this gridpoint, we cannot build here
         if(gp.Building != null) { return false; }

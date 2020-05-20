@@ -6,14 +6,21 @@ using static Enums;
 
 public class UIController : MonoBehaviour
 {
+
+    public static UIController singleton = null;
+
     public List<GameObject> players = new List<GameObject>();
     private GameController gc = null;
     [SerializeField] private Text diceRollText = null;
     [SerializeField] private Text stepText = null;
 
+    private int steps = 0;
+
     private void Awake()
     {
-        gc = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
+        if(singleton == null) { singleton = this; }
+        else { Destroy(this); }
+        gc = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();        
     }
 
     public void Initialize(List<ColonyPlayer> ps)
@@ -52,18 +59,26 @@ public class UIController : MonoBehaviour
     /// <param name="p"> The Player Object that contains all info of the player. </param>
     void UpdatePlayer(GameObject player, ColonyPlayer p)
     {
-        Image background = player.GetComponent<Image>();
+        Image background = player.transform.GetChild(0).GetComponent<Image>();
         PlayerUI pui = player.GetComponent<PlayerUI>();
 
         background.color = p.color;
         background.SetAllDirty();
-        pui.name.text = "Name: " + p.name;
-        pui.points.text = "Points: " + p.points;
-        pui.wood.text = "Wood: " + p.resources[Resource.Wood];
-        pui.ore.text = "Ore: " + p.resources[Resource.Ore];
-        pui.wool.text = "Wool: " + p.resources[Resource.Wool];
-        pui.grain.text = "Grain: " + p.resources[Resource.Grain];
-        pui.stone.text = "Stone: " + p.resources[Resource.Stone];
+        pui.name.text = p.name;
+        pui.points.text = "P: " + p.Points;
+        pui.wood.text = "Wd: " + p.resources[Resource.Wood];
+        pui.ore.text = "Or: " + p.resources[Resource.Ore];
+        pui.wool.text = "Wl: " + p.resources[Resource.Wool];
+        pui.grain.text = "Gr: " + p.resources[Resource.Grain];
+        pui.stone.text = "St: " + p.resources[Resource.Stone];
+    }
+
+    public void NotifyOfBuilding(int i, Building b)
+    {
+        if(b == null) { throw new System.NullReferenceException("Building b is null!"); }
+        PlayerUI pui = players[i].GetComponent<PlayerUI>();
+        Text text = pui.buildings;
+        text.text += b.ToString() + " #" + steps + "\n";
     }
 
     public void UpdateDiceRoll(int result)
@@ -82,5 +97,6 @@ public class UIController : MonoBehaviour
     public void UpdateStepText(int steps)
     {
         stepText.text = "Steps: (#" + steps + ")";
+        this.steps = steps;
     }
 }

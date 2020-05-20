@@ -32,6 +32,18 @@ public static class Enums
             };
         }
     }
+    public static Dictionary<BuildingType, int> DefaultBuildingDict
+    {
+        get
+        {
+            return new Dictionary<BuildingType, int>()
+            {
+                {BuildingType.Village, 5 },
+                {BuildingType.City, 4 },
+                {BuildingType.Street, 15 }
+            };
+        }
+    }
 
     public enum Resource
     {

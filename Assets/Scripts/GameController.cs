@@ -14,7 +14,7 @@ public class GameController : MonoBehaviour
 
     [SerializeField] private GameObject villagePrefab = null;
     [SerializeField] private GameObject cityPrefab = null;
-    [SerializeField] private GameObject streetPrefab = null;
+    public GameObject streetPrefab = null;
     private BoardController bc = null;
     private PlayerManager pm = null;
     private UIController uic = null;
@@ -36,7 +36,11 @@ public class GameController : MonoBehaviour
 
     private void Start()
     {
-        LoadSettings();
+        if(Academy.IsInitialized && Academy.Instance.IsCommunicatorOn)
+        {
+            LoadSettings();
+        }
+        
     }
 
     public void LoadSettings()
@@ -51,6 +55,8 @@ public class GameController : MonoBehaviour
 
     public void NewGame()
     {
+        //Decide the initial order of free placements
+        DecideInitialPlayerOrder();
         Notifier.singleton.Notify("New Game Started!");
         // 1. Create a new board
         bc.CreateFilledBoard();
@@ -64,8 +70,7 @@ public class GameController : MonoBehaviour
         }
         // 3. Initialize UI of the players
         uic.Initialize(pm.players);
-        // 4. Decide the initial order of free placements
-        DecideInitialPlayerOrder();
+        
     }
 
     private void FixedUpdate()
@@ -151,13 +156,33 @@ public class GameController : MonoBehaviour
     public Building CreateVillageOrCity(NonTileGridPoint ntgp, bool city, ColonyPlayer cp)
     {
         if(ntgp == null) { throw new System.Exception("Cannot create village on null Gridpoint!"); }
-        GameObject villageObject = city ? 
-            Instantiate(cityPrefab, ntgp.position, Quaternion.identity, cp.transform) : 
-            Instantiate(villagePrefab, ntgp.position, Quaternion.identity, cp.transform);
+
+        GameObject villageObject = null;
+
+        if (city)
+        {
+            if(ntgp.Building == null || ntgp.Building.Type != BuildingType.Village)
+            {
+                throw new System.Exception("Cannot build a city on " + ntgp.ToString() + " because there is no village here.");
+            }
+            Destroy(ntgp.Building.gameObject); // Destroy the current village here.
+            villageObject = Instantiate(cityPrefab, ntgp.position, Quaternion.identity, cp.transform);
+        }
+        else
+        {
+            if(ntgp.Building != null)
+            {
+                throw new System.Exception("Cannot build a village on " + ntgp.ToString() + " because there is already something there!");
+            }
+            villageObject = Instantiate(villagePrefab, ntgp.position, Quaternion.identity, cp.transform);
+        }
+
         Building building = villageObject.GetComponent<Building>();
-        building.Owner = cp;
-        ntgp.Building = building;
-        cp.AddReward(1f);
+        building.Owner = cp; // Set the correct owner
+        ntgp.Building = building; // Set the gridpoint reference to the new building
+        building.Position = ntgp;
+        cp.AddReward(1f); // Add a reward to the player
+        uic.NotifyOfBuilding(pm.currentPlayer, building);
         return building;
     }
 
@@ -166,7 +191,7 @@ public class GameController : MonoBehaviour
     /// </summary>
     /// <param name="dest"> Where the street will go to. </param>
     /// <param name="cp"> For which player the street will be build </param>
-    public void CreateStreet(NonTileGridPoint dest, ColonyPlayer cp, NonTileGridPoint start = null)
+    public Building CreateStreet(NonTileGridPoint dest, ColonyPlayer cp, NonTileGridPoint start = null)
     {
         if(dest == null) { throw new System.Exception("Cannot create street to null GridPoint!"); }
 
@@ -186,6 +211,8 @@ public class GameController : MonoBehaviour
         b.Owner = cp;
         dest.Connect(start, b);
         start.Connect(dest, b);
+        uic.NotifyOfBuilding(pm.currentPlayer, b);
+        return b;
     }
 
     void GiveResourcesToPlayers(int diceRoll)

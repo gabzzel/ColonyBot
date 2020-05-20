@@ -1,14 +1,20 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.MLAgents;
-using static Enums;
-using Unity.MLAgents.Policies;
 
 public class PlayerManager : MonoBehaviour
 {
+    public static PlayerManager singleton = null;
+
     public List<ColonyPlayer> players = new List<ColonyPlayer>();
     public int currentPlayer = 0;
+
+    private void Awake()
+    {
+        if(singleton == null) { singleton = this; }
+        else { Destroy(this); }
+    }
 
     public ColonyPlayer CurrentPlayer
     {
@@ -17,34 +23,24 @@ public class PlayerManager : MonoBehaviour
 
     public void Initialize(int numberOfPlayers)
     {
-        if(numberOfPlayers < 1 || numberOfPlayers > 4)
-        {
-            Debug.LogWarning(numberOfPlayers + " is not a valid number of players!");
-            return;
-        }
+        if(numberOfPlayers < 1 || numberOfPlayers > 4) { throw new Exception(numberOfPlayers + " is not a valid number of players!"); }
 
         for (int i = 0; i < players.Count; i++)
         {
             players[i].gameObject.SetActive(i < numberOfPlayers);
-            players[i].Initialize();
+            players[i].ResetAll();
         }
     }
 
     public void RequestAction()
     {
-        if (Academy.Instance.IsCommunicatorOn)
-        {
-            players[currentPlayer].RequestDecision();
-        }
-        else
-        {
-            Notifier.singleton.Notify(GetCurrentPlayerName() + " action requested, but no communicator present.");
-        }
+        if (Academy.Instance.IsCommunicatorOn) { CurrentPlayer.RequestDecision(); }
+        else { Notifier.singleton.Notify(GetCurrentPlayerName() + " action requested, but no communicator present."); }
     }
 
     public string GetCurrentPlayerName()
     {
-        return players[currentPlayer].name;
+        return CurrentPlayer.name;
     }
 
     public void NextPlayer(bool notify = true)
@@ -63,22 +59,9 @@ public class PlayerManager : MonoBehaviour
 
     public ColonyPlayer PlayerHasWon()
     {
-        foreach(ColonyPlayer cp in players)
-        {
-            if(cp.points >= 12)
-            {
-                return cp;
-            }
-        }
+        foreach(ColonyPlayer cp in players) { if(cp.Points >= 12f) { return cp; } }
         return null;
     }
 
-    public void SetAllPlayersDone()
-    {
-        foreach(ColonyPlayer cp in players)
-        {
-            cp.EndEpisode();
-        }
-    }
-
+    public void SetAllPlayersDone() { foreach(ColonyPlayer cp in players) { cp.EndEpisode(); } }
 }

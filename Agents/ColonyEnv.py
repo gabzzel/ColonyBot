@@ -12,7 +12,7 @@ from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfig, EngineConfigurationChannel
 from mlagents_envs.side_channel.float_properties_channel import FloatPropertiesChannel
 
-env_name = "C:\\Users\\Gabi van der Kooij\\Documents\\ColonyBot\\Builds\\ColonyBot.exe"
+env_name = "C:\\Users\\Gabi\\Documents\\GitHub\\ColonyBot\\Builds\\ColonyBot.exe"
 train_mode = True  # Whether to run the environment in training or inference mode
 
 engine_configuration_channel = EngineConfigurationChannel()

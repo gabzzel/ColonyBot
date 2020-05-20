@@ -12,4 +12,5 @@ public class PlayerUI : MonoBehaviour
     public Text wool = null;
     public Text grain = null;
     public Text stone = null;
+    public Text buildings = null;
 }

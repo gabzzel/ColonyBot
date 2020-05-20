@@ -9,34 +9,42 @@ using System.Linq;
 
 public class ColonyPlayer : Agent
 {
-    public int points = 0;
-    private int totalRes = 0;
     public Dictionary<Resource, int> resources;
+    public Dictionary<BuildingType, int> availableBuildings;
     public Color color = Color.blue;
     public TurnPhase turnPhase = TurnPhase.Pass;
 
-    private BoardController bc;
-    private GameController gc;
-    private PlayerManager pm;
-    private NonTileGridPoint lastVillage = null;
+    private List<Building> buildings = new List<Building>();
 
-    public override void Initialize()
+    public float Points { get { return GetCumulativeReward(); } }
+    public Building LastBuilding
     {
-        bc = GameObject.FindGameObjectWithTag("GameController").GetComponent<BoardController>();
-        pm = GameObject.FindGameObjectWithTag("GameController").GetComponent<PlayerManager>();
-        gc = GameController.singleton;
-        resources = Enums.DefaultResDictInt;
-        points = 0;
+        get
+        {
+            if(buildings.Count == 0) { return null; }
+            return buildings[buildings.Count - 1];
+        }
+    }
+    public BuildingType LastBuildingType { get { return LastBuilding.Type; } }
+
+    private void Start()
+    {
+        if (!Academy.IsInitialized || !Academy.Instance.IsCommunicatorOn)
+        {
+            ResetAll();
+        }
     }
 
-    public override void OnEpisodeBegin()
+    public void ResetAll()
     {
-        resources = Enums.DefaultResDictInt;
-        points = 0;
+        resources = DefaultResDictInt;
+        availableBuildings = DefaultBuildingDict;
+        SetReward(0f);
         turnPhase = TurnPhase.Pass;
-        totalRes = 0;
-        lastVillage = null;
+        buildings.Clear();
     }
+
+    public override void OnEpisodeBegin() { ResetAll(); }
 
     public override void CollectObservations(VectorSensor sensor)
     {
@@ -47,7 +55,7 @@ public class ColonyPlayer : Agent
         }
 
         // For each gridpoint, get the following info : if there is a building and the value per resource
-        foreach(NonTileGridPoint ntgp in bc.nonTileGridPoints)
+        foreach(NonTileGridPoint ntgp in BoardController.singleton.nonTileGridPoints)
         {
             // If we have a building : 1, if someone else has a building : -1, otherwise 0
             if(ntgp.Building == null) { sensor.AddObservation(0); }
@@ -63,7 +71,11 @@ public class ColonyPlayer : Agent
 
     public override void Heuristic(float[] actionsOut)
     {
-        
+        HashSet<int> actionMask = NormalActionMasks();
+        List<int> availableActions = new List<int>();
+        for (int i = 0; i < 3*54+1; i++) { if (!actionMask.Contains(i)) { availableActions.Add(i); } }
+        int randomIndex = Random.Range(0, availableActions.Count);
+        actionsOut[0] = availableActions[randomIndex];
     }
 
     public override void OnActionReceived(float[] vectorAction)
@@ -71,110 +83,92 @@ public class ColonyPlayer : Agent
         int actionNum = Mathf.FloorToInt(vectorAction[0]);
         
         // If we pass...
-        if(actionNum == 0)
+        if(actionNum == 0 && buildings.Count >= 4)
         {
             turnPhase = TurnPhase.Pass; // Save that we passed
             Notifier.singleton.Notify(name + " passes.");
-            pm.NextPlayer(); // Give the turn to the next player
+            PlayerManager.singleton.NextPlayer(); // Give the turn to the next player
             return; // Don't do anything else
         }
         // If we do not pass, say that we are building now
         else { turnPhase = TurnPhase.Build; }
-
-        BuildingType buildingType = Enums.GetBuildingTypeByNumber(Mathf.FloorToInt(((float)actionNum-1f) % 3f));
+        
+        // 1. Get the building type and the gridpoint out of the action number
+        BuildingType buildingType = GetBuildingTypeByNumber(Mathf.FloorToInt(((float)actionNum-1f) % 3f));
         int gridPointNum = Mathf.FloorToInt(((float)actionNum-1f) / 3f);
-        NonTileGridPoint gp = bc.nonTileGridPoints[gridPointNum];
+        NonTileGridPoint gp = BoardController.singleton.nonTileGridPoints[gridPointNum];
         Notifier.singleton.Notify("Player " + name + " : " + buildingType + " - " + gp.ToString());
-        if (this.transform.childCount >= 4) { RemoveResourcesForBuilding(buildingType); }
-        if (buildingType == BuildingType.Village) { gc.CreateVillageOrCity(gp, false, this); lastVillage = gp; }
-        else if (buildingType == BuildingType.City) { gc.CreateVillageOrCity(gp, true, this); }
-        else if(buildingType == BuildingType.Street) { gc.CreateStreet(gp, this); }
+
+        // 2. Remove the resources and the building from our stockpile
+        availableBuildings[buildingType] -= 1;
+        if (buildings.Count >= 4) { RemoveResourcesForBuilding(buildingType); }
+
+        // 3. Give the order to build the building at the desired GridPoint
+        if (buildingType == BuildingType.Village) { buildings.Add(GameController.singleton.CreateVillageOrCity(gp, false, this)); }
+        else if (buildingType == BuildingType.City)
+        {   
+            availableBuildings[BuildingType.Village] += 1;
+            buildings.Add(GameController.singleton.CreateVillageOrCity(gp, true, this));
+        }
+        else if(buildingType == BuildingType.Street) { buildings.Add(GameController.singleton.CreateStreet(gp, this)); }
     }
 
     public override void CollectDiscreteActionMasks(DiscreteActionMasker actionMasker)
     {
-        if(this.transform.childCount < 4)
-        {
-            CollectDiscretActionMasksInitial(actionMasker);
-        }
-        else
-        {
-            CollectDiscreteActionMasksNormal(actionMasker);
-        }
+        actionMasker.SetMask(0, NormalActionMasks());
     }
 
-    private void CollectDiscreteActionMasksNormal(DiscreteActionMasker actionMasker)
+    private HashSet<int> NormalActionMasks()
     {
-        List<int> impossibleActions = new List<int>();
-        List<NonTileGridPoint> gps = bc.nonTileGridPoints;
+        HashSet<int> impossibleActions = new HashSet<int>();
+
+        if(buildings.Count < 4) { impossibleActions.Add(0); }
+
+        List<NonTileGridPoint> gps = BoardController.singleton.nonTileGridPoints;
         // For every action...
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < gps.Count; i++)
         {
-            BuildingType buildingType = GetBuildingTypeByNumber(i);
+            NonTileGridPoint gp = gps[i];
             // For every gridpoint...
-            for (int j = 0; j < 54; j++)
-            {
-                NonTileGridPoint gp = gps[j];
-                int actionNumber = i * 54 + j + 1;
-                // Check if have the resources and we can  build here
-                if (!HasResourcesToBuild(buildingType) || !bc.PossibleBuildingSite(gp, this, buildingType))
+            for (int j = 0; j < 3; j++)
+            {                
+                BuildingType buildingType = GetBuildingTypeByNumber(j);
+                int actionNumber = i * 3 + j + 1;
+
+                // We are in the initial building phase.
+                if(buildings.Count < 4)
                 {
-                    impossibleActions.Add(actionNumber);
+                    // If we have build nothing, or a village and a street..
+                    if(buildings.Count % 2f == 0f && (
+                        // And we are not building  a village, or we can't build a village here
+                        buildingType != BuildingType.Village || !BoardController.singleton.PossibleBuildingSite(gp, this, buildingType, true)))
+                    {
+                        impossibleActions.Add(actionNumber);
+                    }
+                    else if (buildings.Count % 2f == 1f && (buildingType != BuildingType.Street || !gp.IsConnectedTo(LastBuilding.Position, false)))
+                    {
+                        impossibleActions.Add(actionNumber);
+                    }
+                }
+
+                // We are not in the initial building phase.
+                else
+                {
+                    // If we don't have enough resources for this building...
+                    if (!HasResourcesToBuild(buildingType)) { impossibleActions.Add(actionNumber); }
+                    // If we can't place the building here...
+                    else if(!BoardController.singleton.PossibleBuildingSite(gp, this, buildingType)) { impossibleActions.Add(actionNumber); }
+                    // If we don't have any buildings of this type left to build...
+                    else if(availableBuildings[buildingType] <= 0) { impossibleActions.Add(actionNumber); }
                 }
             }
         }
-        actionMasker.SetMask(0, impossibleActions);
-
-    }
-
-    private void CollectDiscretActionMasksInitial(DiscreteActionMasker actionMasker)
-    {
-
-        List<int> impossibleActions = new List<int>() { 0 }; // Passing is impossible in the initial actions
-        List<NonTileGridPoint> ntgps = bc.nonTileGridPoints;
-
-        // For every action...
-        for (int j = 0; j < 54; j++)
-        {
-            var ntgp = ntgps[j];
-            // For every gridpoint...
-            for (int i = 0; i < 3; i++)
-            { 
-                BuildingType buildingType = GetBuildingTypeByNumber(i);
-                int actionNumber = (j * 3) + i + 1;
-
-                /*
-                if(this.transform.childCount % 2 == 0 && (buildingType != BuildingType.Village || j != 0))
-                {
-                    impossibleActions.Add(actionNumber);
-                }
-                else if(this.transform.childCount % 2 == 1 && (buildingType != BuildingType.Street || !gp.connectedTo.ContainsKey(lastVillage)))
-                {
-                    impossibleActions.Add(actionNumber);
-                }
-
-                continue;
-                */
-                // Our initial villages.
-                // If our childcount = 0 or 2, we want to place a village.
-                if (this.transform.childCount % 2 == 0 && (buildingType != BuildingType.Village || !bc.PossibleBuildingSite(ntgp, this, BuildingType.Village, true)))
-                {
-                    impossibleActions.Add(actionNumber);
-                }
-                // Our initial streets
-                else if(this.transform.childCount % 2 == 1 && (buildingType != BuildingType.Street || !ntgp.IsConnectedTo(lastVillage, false)))
-                {
-                    impossibleActions.Add(actionNumber);
-                }
-            }
-        }
-        actionMasker.SetMask(0, impossibleActions);
+        return impossibleActions;
     }
 
     public void GiveResources(Resource res, int number = 1)
     {
         resources[res] += number;
-        totalRes += number;
     }
 
     private bool HasResourcesToBuild(BuildingType buildingType)
@@ -215,8 +209,10 @@ public class ColonyPlayer : Agent
             default:
                 break;
         }
-    }
 
-    
+        foreach(Resource res in GetResourcesAsList())
+        {
+            if(resources[res] < 0) { throw new System.Exception("The " + res + " stockpile of " + name + " is below zero, so we cannot build " + buildingType); }
+        }
+    } 
 }
-

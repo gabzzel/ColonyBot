@@ -69,15 +69,23 @@ public class NonTileGridPoint : GridPoint
     }
 
     /// <summary>
-    /// Connect this NTGP to another NTGP, possible by a street.
+    /// Connect this NTGP to another NTGP, possibly by a street.
     /// </summary>
     /// <param name="ntgp"></param>
     /// <param name="street"> The Street between this and the other. </param>
-    public void Connect(NonTileGridPoint ntgp, Building street = null)
+    public void Connect(NonTileGridPoint ntgp)
     {
-        if(ntgp == null) { throw new System.Exception("Cannot connect NTGP to null NTGP!"); }
-        else if (connections.ContainsKey(ntgp)) { connections[ntgp] = street; }
-        else { connections.Add(ntgp, null); }
+        if (ntgp == null) { throw new System.Exception("Cannot connect NTGP to null NTGP!"); }
+        else if (!connections.ContainsKey(ntgp)) { connections.Add(ntgp, null); }
+    }
+
+    public void Connect(NonTileGridPoint ntgp, Building street)
+    {
+        if(ntgp == null) { throw new System.Exception("Cannot connect " + ToString() + " to null NTGP."); }
+        else if(street == null) { throw new System.Exception("Cannot connect " + ToString() + " to " + ntgp.ToString() + " with null street!"); }
+        else if (!connections.ContainsKey(ntgp)) { throw new System.Exception("Cannot connect " + ToString() + " with " + ntgp.ToString() + " because they are not connected!"); }
+        else if(connections[ntgp] != null) { throw new System.Exception("Cannot connect " + ToString() + " with " + ntgp.ToString() + " because there already is a street between them!"); }
+        connections[ntgp] = street;
     }
 
     /// <summary>
@@ -145,18 +153,42 @@ public class NonTileGridPoint : GridPoint
 
         foreach(NonTileGridPoint neighbour in ConnectedNTGPs.Keys)
         {
-            // If our neighbour is occupied by our player, we are golden.
-            if (neighbour.OccupiedBy(player)) { return neighbour; }
+            // If our neighbour is occupied by our player and we are not yet connected with a street, we are golden.
+            if (neighbour.OccupiedBy(player) && connections[neighbour] == null) { return neighbour; }
 
             // If not, we should go over every street connection and find one with our player
             foreach(NonTileGridPoint neighbour2 in neighbour.ConnectedNTGPs.Keys)
             {
                 Building street = neighbour.ConnectedNTGPs[neighbour2];
-                if(street != null && street.Owner == player) { return neighbour; }
+                // If there is a street between the neighbour and its neightbour, its owner is right and we are not looking at ourselves..
+                if(street != null && street.Owner == player && neighbour2 != this) { return neighbour; }
             }
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Returns a subset of our neighbours which are suited to connect with for a street
+    /// </summary>
+    /// <param name="player"> The player that wants to connect us to a street. </param>
+    /// <returns></returns>
+    public HashSet<NonTileGridPoint> FindStreetEnds(ColonyPlayer player)
+    {
+        HashSet<NonTileGridPoint> result = new HashSet<NonTileGridPoint>();
+
+        foreach (NonTileGridPoint neighbour in ConnectedNTGPs.Keys)
+        {
+            if (neighbour.OccupiedBy(player) && connections[neighbour] == null) { result.Add(neighbour); }
+
+            foreach (NonTileGridPoint neighbour2 in neighbour.ConnectedNTGPs.Keys)
+            {
+                Building street = neighbour.ConnectedNTGPs[neighbour2];
+                // If there is a street between the neighbour and its neightbour, its owner is right and we are not looking at ourselves..
+                if (street != null && street.Owner == player && neighbour2 != this) { result.Add(neighbour); }
+            }
+        }
+        return result;
     }
 
     public override string ToString()
