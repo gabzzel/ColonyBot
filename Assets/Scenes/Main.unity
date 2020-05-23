@@ -1011,6 +1011,7 @@ GameObject:
   - component: {fileID: 330755334}
   - component: {fileID: 330755333}
   - component: {fileID: 330755335}
+  - component: {fileID: 330755330}
   m_Layer: 5
   m_Name: GameController
   m_TagString: GameController
@@ -1033,6 +1034,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &330755330
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330755328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b313f18f0b83d343b0ec75e53112de4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isBank: 1
 --- !u!114 &330755333
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1077,9 +1091,9 @@ MonoBehaviour:
   - {fileID: 472954965}
   - {fileID: 12354571}
   - {fileID: 786028784}
-  useStandard: 0
+  useStandard: 1
   allowHighChanceNeighbours: 0
-  drawGridPointIndicators: 1
+  drawGridPointIndicators: 0
 --- !u!114 &330755334
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1094,13 +1108,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   pointsToWin: 12
   numberOfPlayers: 4
-  stepTime: 0.5
+  stepTime: 0.25
   villagePrefab: {fileID: 8832107849633449914, guid: 15c6ade5718c46f4684c64c38017a4b0,
     type: 3}
   cityPrefab: {fileID: 5336831520871488642, guid: d630e75f799761e49b101b2c84a9c4f7,
     type: 3}
   streetPrefab: {fileID: 6487479829580133341, guid: 222b512e014cc8c418e4ab02aa56720e,
     type: 3}
+  gameStarted: 0
 --- !u!114 &330755335
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1118,7 +1133,6 @@ MonoBehaviour:
   - {fileID: 895851876}
   - {fileID: 681602446}
   - {fileID: 1236292668}
-  currentPlayer: 0
 --- !u!1 &362567496
 GameObject:
   m_ObjectHideFlags: 0

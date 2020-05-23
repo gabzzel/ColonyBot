@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5531525498888209191}
   - component: {fileID: 5531525498888209185}
   - component: {fileID: 5531525498888209184}
+  - component: {fileID: 2383484336881867946}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -48,7 +49,6 @@ MonoBehaviour:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
-  points: 0
   color: {r: 0, g: 0, b: 1, a: 1}
   turnPhase: 1
 --- !u!114 &5531525498888209184
@@ -75,3 +75,15 @@ MonoBehaviour:
   m_BehaviorName: Building
   TeamId: 0
   m_UseChildSensors: 1
+--- !u!114 &2383484336881867946
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5531525498888209188}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b313f18f0b83d343b0ec75e53112de4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

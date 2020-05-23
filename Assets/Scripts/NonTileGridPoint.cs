@@ -96,7 +96,13 @@ public class NonTileGridPoint : GridPoint
     /// <returns></returns>
     public bool IsConnectedTo(NonTileGridPoint ntgp, bool withStreet)
     {
-        return connections.ContainsKey(ntgp) && (!withStreet || connections[ntgp] == null);
+        // If it's not a neighbour of ours, return false
+        if (!connections.ContainsKey(ntgp)) { return false; }
+
+        // If we need it to be connected with a street and there is no street, return false
+        if(withStreet && connections[ntgp] == null) { return false; }
+
+        return true;
     }
 
     /// <summary>

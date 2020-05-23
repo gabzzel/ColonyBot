@@ -47,6 +47,9 @@ TagManager:
   - name: Board
     uniqueID: 137951675
     locked: 0
+  - name: GridPointIndicator
+    uniqueID: 799004771
+    locked: 0
   - name: Building
     uniqueID: 1183143709
     locked: 0

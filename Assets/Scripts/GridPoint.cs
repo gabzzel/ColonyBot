@@ -1,14 +1,9 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
-using static Enums;
+﻿using UnityEngine;
 
 public class GridPoint
 {
     public Vector2 position = Vector2.zero;
     public Vector2Int colRow = Vector2Int.zero;
-
     /*
 
     public bool isMiddle = false;

@@ -16,9 +16,7 @@ public class Building : MonoBehaviour
             owner = value;
         }
     }
-
     public BuildingType Type { get { return type; } }
-
     public NonTileGridPoint Position
     {
         get { return gridPoint; }

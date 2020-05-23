@@ -19,28 +19,37 @@ public class GameController : MonoBehaviour
     private PlayerManager pm = null;
     private UIController uic = null;
 
-    private List<int> initialPlayers = new List<int>();
+    [SerializeField] private bool gameStarted = false;
+
+    public bool GameStarted { get { return gameStarted; } }
 
     private void Awake()
     {
-        if(singleton == null) { singleton = this; }
+        if (singleton == null) { singleton = this; }
         else { Destroy(this.gameObject); }
 
         bc = GetComponent<BoardController>();
         pm = GetComponent<PlayerManager>();
         uic = GameObject.FindGameObjectWithTag("UIController").GetComponent<UIController>();
+
+        Academy a = Academy.Instance;
         Academy.Instance.AutomaticSteppingEnabled = false;
-        Academy.Instance.OnEnvironmentReset += NewGame;
+        Academy.Instance.OnEnvironmentReset += OnEnvironmentReset;
+        
     }
 
+    private void OnEnvironmentReset()
+    {
+        NewGame();
+    }
 
     private void Start()
     {
-        if(Academy.IsInitialized && Academy.Instance.IsCommunicatorOn)
+        if (Academy.IsInitialized && Academy.Instance.IsCommunicatorOn)
         {
-            LoadSettings();
+            LoadSettings();            
         }
-        
+        Academy.Instance.EnvironmentStep();
     }
 
     public void LoadSettings()
@@ -55,12 +64,15 @@ public class GameController : MonoBehaviour
 
     public void NewGame()
     {
-        //Decide the initial order of free placements
-        DecideInitialPlayerOrder();
+        if (!Academy.IsInitialized)
+        {
+            throw new System.Exception("Cannot start game without an initialized academy!");
+        }
+
         Notifier.singleton.Notify("New Game Started!");
         // 1. Create a new board
         bc.CreateFilledBoard();
-        // 2. Initialize players
+        // 2. Initialize players and set the initial player order
         pm.Initialize(numberOfPlayers);
         // 2.1 Destroy all buildings
         for (int i = GameObject.FindGameObjectsWithTag("Building").Length - 1; i >= 0; i--)
@@ -70,68 +82,36 @@ public class GameController : MonoBehaviour
         }
         // 3. Initialize UI of the players
         uic.Initialize(pm.players);
-        
+        gameStarted = true;
     }
 
     private void FixedUpdate()
     {
-        ColonyPlayer winner = pm.PlayerHasWon();
-        if(winner == null)
+        if (gameStarted)
         {
             stepTimer += Time.fixedDeltaTime;
-            if(stepTimer >= stepTime)
+            if (stepTimer >= stepTime)
             {
                 NextStep();
                 stepTimer = 0f;
             }
         }
-        else
-        {
-            EndGame(winner);
-        }
     }
 
     public void NextStep()
     {
-        if(initialPlayers.Count > 0)
-        {
-            pm.currentPlayer = initialPlayers[initialPlayers.Count - 1];
-            pm.CurrentPlayer.RequestDecision();
-            initialPlayers.RemoveAt(initialPlayers.Count - 1);
-        }
-        else
-        {
-            // Perform 1 step / round where every player gets a turn and dices are rolled before their turns
-            ColonyPlayer currentPlayer = pm.CurrentPlayer;
-
-            // If the current player passed last turn, roll the dice
-            if (currentPlayer.turnPhase == TurnPhase.Pass) { PerformDiceRoll(); }
-
-            // Request an action from the current player
-            currentPlayer.RequestDecision();
-        }
+        // Start a lighting fast automatic trade round
+        pm.StartTrade();
+        // Request an action from the current player. This also gives the turn to the next player and rolls the dice
+        pm.RequestAction();        
 
         uic.UpdateStepText(Academy.Instance.StepCount);
         uic.UpdateAllPlayers(pm.players);
         Academy.Instance.EnvironmentStep();
 
     }
-    
-    void DecideInitialPlayerOrder()
-    {
-        List<int> firstHalf = new List<int>();
-        int r = Random.Range(0, numberOfPlayers);
-        for (int i = 0; i < numberOfPlayers; i++)
-        {
-            int value = (i + r) % numberOfPlayers;
-            firstHalf.Add(value);
-            firstHalf.Add(value);
-        }
-        List<int> secondHalf = new List<int>(firstHalf);
-        secondHalf.Reverse();
-        firstHalf.AddRange(secondHalf);
-        initialPlayers = firstHalf;
-    }
+
+
 
     public void PerformDiceRoll()
     {
@@ -155,13 +135,13 @@ public class GameController : MonoBehaviour
 
     public Building CreateVillageOrCity(NonTileGridPoint ntgp, bool city, ColonyPlayer cp)
     {
-        if(ntgp == null) { throw new System.Exception("Cannot create village on null Gridpoint!"); }
+        if (ntgp == null) { throw new System.Exception("Cannot create village on null Gridpoint!"); }
 
         GameObject villageObject = null;
 
         if (city)
         {
-            if(ntgp.Building == null || ntgp.Building.Type != BuildingType.Village)
+            if (ntgp.Building == null || ntgp.Building.Type != BuildingType.Village)
             {
                 throw new System.Exception("Cannot build a city on " + ntgp.ToString() + " because there is no village here.");
             }
@@ -170,7 +150,7 @@ public class GameController : MonoBehaviour
         }
         else
         {
-            if(ntgp.Building != null)
+            if (ntgp.Building != null)
             {
                 throw new System.Exception("Cannot build a village on " + ntgp.ToString() + " because there is already something there!");
             }
@@ -182,7 +162,7 @@ public class GameController : MonoBehaviour
         ntgp.Building = building; // Set the gridpoint reference to the new building
         building.Position = ntgp;
         cp.AddReward(1f); // Add a reward to the player
-        uic.NotifyOfBuilding(pm.currentPlayer, building);
+        uic.NotifyOfBuilding(pm.players.IndexOf(cp), building);
         return building;
     }
 
@@ -193,16 +173,16 @@ public class GameController : MonoBehaviour
     /// <param name="cp"> For which player the street will be build </param>
     public Building CreateStreet(NonTileGridPoint dest, ColonyPlayer cp, NonTileGridPoint start = null)
     {
-        if(dest == null) { throw new System.Exception("Cannot create street to null GridPoint!"); }
+        if (dest == null) { throw new System.Exception("Cannot create street to null GridPoint!"); }
 
         start = dest.FindConnectionWithPlayer(cp);
 
-        if(start == null) { throw new System.Exception("Cannot build a street from nowhere..."); }
+        if (start == null) { throw new System.Exception("Cannot build a street from nowhere..."); }
 
         Vector2 position = new Vector2((dest.position.x - start.position.x) / 2f, (dest.position.y - start.position.y) / 2f) + start.position;
         float rotation = 90f;
-        if(dest.position.x < start.position.x && start.position.y < dest.position.y || start.position.y > dest.position.y && dest.position.x > start.position.x) { rotation = -30f; }
-        else if(dest.position.x > start.position.x && start.position.y < dest.position.y || start.position.y > dest.position.y && start.position.x > dest.position.x)
+        if (dest.position.x < start.position.x && start.position.y < dest.position.y || start.position.y > dest.position.y && dest.position.x > start.position.x) { rotation = -30f; }
+        else if (dest.position.x > start.position.x && start.position.y < dest.position.y || start.position.y > dest.position.y && start.position.x > dest.position.x)
         {
             rotation = 30f;
         }
@@ -211,19 +191,19 @@ public class GameController : MonoBehaviour
         b.Owner = cp;
         dest.Connect(start, b);
         start.Connect(dest, b);
-        uic.NotifyOfBuilding(pm.currentPlayer, b);
+        uic.NotifyOfBuilding(pm.players.IndexOf(cp), b);
         return b;
     }
 
     void GiveResourcesToPlayers(int diceRoll)
     {
         List<Tile> relevantTiles = bc.GetTilesByNumber(diceRoll); // Get the tiles with this number
-        foreach(Tile t in relevantTiles)
+        foreach (Tile t in relevantTiles)
         {
             HashSet<NonTileGridPoint> neighbouringGridPoints = t.GridPoint.ConnectedNTGPs; // Get all tiles where there is possibly a building
-            foreach(NonTileGridPoint ntgp in neighbouringGridPoints)
+            foreach (NonTileGridPoint ntgp in neighbouringGridPoints)
             {
-                if(ntgp.Building != null)
+                if (ntgp.Building != null)
                 {
                     Building b = ntgp.Building;
                     int number = b.Type == BuildingType.Village ? 1 : 2;
@@ -237,7 +217,8 @@ public class GameController : MonoBehaviour
     {
         Notifier.singleton.Notify("Game Ended!");
         Notifier.singleton.Notify(winner.name + " has won!");
-        winner.AddReward(10f);
-        pm.SetAllPlayersDone();
+        //winner.AddReward(10f);
+        pm.SetAllPlayersDone(); // End the episodes
+        gameStarted = false;
     }
 }

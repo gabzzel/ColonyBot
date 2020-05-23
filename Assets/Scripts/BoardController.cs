@@ -20,8 +20,10 @@ public class BoardController : MonoBehaviour
     [SerializeField] private GameObject gridPointIndicator = null;
     [SerializeField] private GameObject board = null;
     public Dictionary<Vector2Int, GridPoint> allGridPoints = new Dictionary<Vector2Int, GridPoint>();
-    public List<NonTileGridPoint> nonTileGridPoints = new List<NonTileGridPoint>();
-    public List<TileGridPoint> tileGridPoints = new List<TileGridPoint>();
+    public Dictionary<Vector2Int, NonTileGridPoint> nonTileGridPoints = new Dictionary<Vector2Int, NonTileGridPoint>();
+    public Dictionary<Vector2Int, TileGridPoint> tileGridPoints = new Dictionary<Vector2Int, TileGridPoint>();
+    // The total value of every resource on the board. Calculated in DistributeNumbers()
+    public Dictionary<Resource, float> TotalValues = new Dictionary<Resource, float>();
 
     [SerializeField] private List<Tile> tiles = new List<Tile>();
 
@@ -99,6 +101,8 @@ public class BoardController : MonoBehaviour
 
     void DistributeNumbers()
     {
+        TotalValues = Enums.DefaultResDictFloat;
+
         if (useStandard)
         {
             for (int i = 0; i < tiles.Count; i++)
@@ -139,12 +143,18 @@ public class BoardController : MonoBehaviour
                             int r = Random.Range(0, indexes.Count); // Get a random index
                             int index = indexes[r]; // Get the index of the number
                             int num = standardNumbers[index]; // The random number
-                            tiles[i].SetNumber(num);
+                            Tile t = tiles[i];
+                            t.SetNumber(num);
                             indexes.RemoveAt(r);
                         }
                     }
                 }
             }
+        }
+
+        foreach(Tile t in tiles)
+        {
+            if(t.Resource != Resource.None) { TotalValues[t.Resource] += t.Value; }
         }
     }
 
@@ -192,6 +202,8 @@ public class BoardController : MonoBehaviour
             else { DestroyImmediate(board); }
         }
         // Clear the Lists etc.
+        nonTileGridPoints.Clear();
+        tileGridPoints.Clear();
         tiles.Clear();
         allGridPoints.Clear();
     }
@@ -246,13 +258,13 @@ public class BoardController : MonoBehaviour
         if ((colRow.x % 2 == 1 && (colRow.y + 1) % 3 == 0) || (colRow.x % 2 == 0 && (colRow.y - 1) % 3 == 0))
         {
             TileGridPoint tgp = new TileGridPoint(globalPos, colRow);
-            tileGridPoints.Add(tgp);
+            tileGridPoints.Add(colRow, tgp);
             allGridPoints.Add(colRow, tgp);
         }
         else
         {
             NonTileGridPoint ntgp = new NonTileGridPoint(globalPos, colRow);
-            nonTileGridPoints.Add(ntgp);
+            nonTileGridPoints.Add(colRow, ntgp);
             allGridPoints.Add(colRow, ntgp);
         } 
     }
@@ -262,50 +274,83 @@ public class BoardController : MonoBehaviour
     /// </summary>
     void ConnectGridPoints()
     {
-        Vector2Int[] tgpConnections = new Vector2Int[]
+        Vector2Int[] directions1 = new Vector2Int[]
         {
             new Vector2Int(0, 1), // Above
-            new Vector2Int(1, 1), // Right up 
-            new Vector2Int(1, 0), // Right low
+            new Vector2Int(1, 1), // Right up
+            new Vector2Int(1, 0), // Right low 
             new Vector2Int(0, -1), // Below
-            new Vector2Int(-1, 0), // Left low
+            new Vector2Int(-1, 0), // Left low 
             new Vector2Int(-1, 1), // Left up
         };
-        Vector2Int[] ntgpConnections = new Vector2Int[]
+        Vector2Int[] directions2 = new Vector2Int[]
         {
-            new Vector2Int(0,1),
-            new Vector2Int(-1,0),
-            new Vector2Int(1,0)
+            new Vector2Int(0, 1),
+            new Vector2Int(1, 0),
+            new Vector2Int(1, -1),
+            new Vector2Int(0, -1),
+            new Vector2Int(-1, -1),
+            new Vector2Int(-1, 0)
         };
 
-        // Connect NTGP's to their NTGP neighbours
-        foreach(NonTileGridPoint ntgp in nonTileGridPoints)
+        // Connect all TGP's to their neighbouring NTGP's
+        foreach(KeyValuePair<Vector2Int, TileGridPoint> tgp in tileGridPoints)
         {
-            foreach(NonTileGridPoint ntgp2 in nonTileGridPoints)
+            Vector2Int[] directions = tgp.Key.x % 2 == 1 ? directions1 : directions2;
+
+            foreach(Vector2Int dir in directions)
             {
-                foreach(Vector2Int dir in ntgpConnections)
+                Vector2Int position = tgp.Key + dir;
+                NonTileGridPoint ntgp = null;
+                if(nonTileGridPoints.TryGetValue(position, out ntgp))
                 {
-                    if(ntgp2.colRow == ntgp.colRow + dir)
-                    {
-                        ntgp.Connect(ntgp2);
-                        ntgp2.Connect(ntgp);
-                    }
+                    tgp.Value.Connect(ntgp);
+                    ntgp.Connect(tgp.Value);
                 }
             }
         }
 
-        // Connect TGP's to their NTGP neighbours
-        foreach(TileGridPoint tgp in tileGridPoints)
+        Vector2Int[] type1 = new Vector2Int[]
         {
-            foreach(NonTileGridPoint ntgp in nonTileGridPoints)
+            new Vector2Int(0, 1),
+            new Vector2Int(1, -1),
+            new Vector2Int(-1, -1)
+        };
+        Vector2Int[] type2 = new Vector2Int[]
+        {
+            new Vector2Int(0, 1),
+            new Vector2Int(1, 0),
+            new Vector2Int(-1, 0)
+        };
+        Vector2Int[] type3 = new Vector2Int[]
+        {
+            new Vector2Int(1, 0),
+            new Vector2Int(0, -1),
+            new Vector2Int(-1, 0)
+        };
+        Vector2Int[] type4 = new Vector2Int[]
+        {
+            new Vector2Int(1,1),
+            new Vector2Int(0, -1),
+            new Vector2Int(-1, 1)
+        };
+
+        // Connect all NTGP's to their correct NTGP neighbours
+        foreach(KeyValuePair<Vector2Int, NonTileGridPoint> pair in nonTileGridPoints)
+        {
+            NonTileGridPoint ntgp = pair.Value;
+            NonTileGridPoint neighbour = null;
+            if(pair.Key.y % 3 == 2) { directions1 = type1; }
+            else if(pair.Key.x % 2 == 1 && pair.Key.y % 3 == 0) { directions1 = type2; }
+            else if(pair.Key.x % 2 == 0 && pair.Key.y % 3 == 0) { directions1 = type3; }
+            else { directions1 = type4; }
+
+            foreach(Vector2Int direction in directions1)
             {
-                foreach(Vector2Int dir in tgpConnections)
+                if(nonTileGridPoints.TryGetValue(pair.Key + direction, out neighbour))
                 {
-                    if(ntgp.colRow == tgp.colRow + dir)
-                    {
-                        ntgp.Connect(tgp);
-                        tgp.Connect(ntgp);
-                    }
+                    ntgp.Connect(neighbour);
+                    neighbour.Connect(ntgp);
                 }
             }
         }
@@ -323,7 +368,7 @@ public class BoardController : MonoBehaviour
     void CreateTiles()
     {
         tiles.Clear();
-        foreach (TileGridPoint tgp in tileGridPoints)
+        foreach (TileGridPoint tgp in tileGridPoints.Values)
         {
             GameObject tileObject = Instantiate(tilePrefab, tgp.position, tilePrefab.transform.rotation, board.transform);
             tileObject.name = "Tile " + (tiles.Count + 1) + " @ " + tgp.colRow.ToString();
@@ -350,7 +395,7 @@ public class BoardController : MonoBehaviour
     public HashSet<NonTileGridPoint> GetGridPointsWithBuildingOfPlayer(ColonyPlayer player)
     {
         HashSet<NonTileGridPoint> result = new HashSet<NonTileGridPoint>();
-        foreach (NonTileGridPoint gp in nonTileGridPoints)
+        foreach (NonTileGridPoint gp in nonTileGridPoints.Values)
         {
             if (gp.OccupiedBy(player)) { result.Add(gp); }
         }
@@ -407,7 +452,10 @@ public class BoardController : MonoBehaviour
         foreach(NonTileGridPoint neighbour in gp.ConnectedNTGPs.Keys)
         {
             // If one of our neighbours already has a village or city on it (Distance Rule), we cannot build here
-            if (neighbour.Building != null) { return false; }
+            if (neighbour.Building != null)
+            {
+                return false;
+            }
             if (!free && !neighbour.HasStreetConnectionForPlayer(player)) { return false; }
         }
     
@@ -416,7 +464,8 @@ public class BoardController : MonoBehaviour
 
     private bool PossibleStreetBuildingSite(NonTileGridPoint gp, ColonyPlayer player)
     {
-        return gp.FindConnectionWithPlayer(player) != null;
+        NonTileGridPoint ntgp = gp.FindConnectionWithPlayer(player);
+        return ntgp != null && ntgp.ConnectedNTGPs[gp] == null;
     }
 
     private Sprite GetSpriteByResource(Resource res)
