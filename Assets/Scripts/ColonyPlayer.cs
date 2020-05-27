@@ -12,6 +12,7 @@ public class ColonyPlayer : Agent
 {
     public Dictionary<Resource, int> resources;
     public Dictionary<BuildingType, int> availableBuildings;
+    public Dictionary<BuildingType, int> buildingOptions;
     public Color color = Color.blue;
     public TurnPhase turnPhase = TurnPhase.Pass;
 
@@ -29,6 +30,21 @@ public class ColonyPlayer : Agent
     }
     public BuildingType LastBuildingType { get { return LastBuilding.Type; } }
     public List<Building> Buildings { get { return buildings; } }
+    public int TotalResources
+    {
+        get
+        {
+            int number = 0;
+            foreach(KeyValuePair<Resource, int> res in resources)
+            {
+                number += res.Value;
+            }
+            return number;
+        }
+    }
+
+    private Dictionary<int, string> actionMask = new Dictionary<int, string>();
+    private bool dirty = true;
 
     private void Awake()
     {
@@ -48,9 +64,13 @@ public class ColonyPlayer : Agent
     {
         resources = DefaultResDictInt;
         availableBuildings = DefaultBuildingDict;
+        buildingOptions = new Dictionary<BuildingType, int>();
         SetReward(0f);
         turnPhase = TurnPhase.Pass;
         buildings.Clear();
+        trader = GetComponent<Trader>();
+        trader.Initialize();
+        dirty = true;
     }
 
     public override void OnEpisodeBegin() { ResetAll(); }
@@ -80,17 +100,18 @@ public class ColonyPlayer : Agent
 
     public override void Heuristic(float[] actionsOut)
     {
-        Dictionary<int, string> actionMask = NormalActionMasks();
         List<int> availableActions = new List<int>();
         for (int i = 0; i < 3*54+1; i++) { if (!actionMask.ContainsKey(i)) { availableActions.Add(i); } }
         int randomIndex = UnityEngine.Random.Range(0, availableActions.Count);
         actionsOut[0] = availableActions[randomIndex];
+        dirty = true;
     }
 
     public override void OnActionReceived(float[] vectorAction)
     {
+        dirty = true;
         // If we have won, don't do anything but notify everyone
-        if(Points >= GameController.singleton.pointsToWin) { PlayerManager.singleton.NotifyOfWin(this); return; }
+        if (Points >= GameController.singleton.pointsToWin) { PlayerManager.singleton.NotifyOfWin(this); return; }
 
         // Don't do anything if the game isn't started yet
         if (!GameController.singleton.GameStarted)
@@ -133,21 +154,29 @@ public class ColonyPlayer : Agent
             buildings.Add(GameController.singleton.CreateVillageOrCity(gp, true, this));
         }
         else if(buildingType == BuildingType.Street) { buildings.Add(GameController.singleton.CreateStreet(gp, this)); }
+        
     }
 
     public override void CollectDiscreteActionMasks(DiscreteActionMasker actionMasker)
     {
-        Dictionary<int, string> mask = NormalActionMasks();
-        if(mask.Count == 163)
+        // Only update our action mask if an action was done by 
+        if (dirty) { actionMask = NormalActionMasks(); }
+        if(actionMask.Count == 163)
         {
             throw new System.Exception("All action masked for " + name);
         }
-        actionMasker.SetMask(0, mask.Keys);
+        actionMasker.SetMask(0, actionMask.Keys);
     }
 
     private Dictionary<int, string> NormalActionMasks()
     {
         Dictionary<int, string> impossibleActions = new Dictionary<int, string>();
+        buildingOptions = new Dictionary<BuildingType, int>()
+        {
+            {BuildingType.Village, 54},
+            {BuildingType.City, 54},
+            {BuildingType.Street, 54}
+        };
 
         if(buildings.Count < 4) { impossibleActions.Add(0, "Cannot pass in initial turns"); }
 
@@ -169,18 +198,22 @@ public class ColonyPlayer : Agent
                     if(buildings.Count % 2 == 0 && buildingType != BuildingType.Village)
                     {
                         impossibleActions.Add(actionNumber, "We need to build one of our initial villages!");
+                        buildingOptions[buildingType]--;
                     }
                     else if (buildings.Count % 2 == 0 && !BoardController.singleton.PossibleBuildingSite(ntgp, this, BuildingType.Village, true))
                     {
                         impossibleActions.Add(actionNumber, "Cannot build village @ " + ntgp.ToString());
+                        buildingOptions[buildingType]--;
                     }
                     else if (buildings.Count % 2 == 1 && buildingType != BuildingType.Street)
                     {
                         impossibleActions.Add(actionNumber, "We need to build one of our initial streets!");
+                        buildingOptions[buildingType]--;
                     }
                     else if(buildings.Count % 2 == 1 && !ntgp.IsConnectedTo(LastBuilding.Position, false))
                     {
                         impossibleActions.Add(actionNumber, ntgp.ToString() + " is not connected to our last initial village");
+                        buildingOptions[buildingType]--;
                     }
                 }
 
@@ -193,15 +226,18 @@ public class ColonyPlayer : Agent
                     else if(!BoardController.singleton.PossibleBuildingSite(ntgp, this, buildingType, false))
                     {
                         impossibleActions.Add(actionNumber, ntgp.ToString() + " is not a possible building site for " + buildingType);
+                        buildingOptions[buildingType]--;
                     }
                     // If we don't have any buildings of this type left to build...
                     else if(availableBuildings[buildingType] <= 0)
                     {
                         impossibleActions.Add(actionNumber, "We cannot build anymore " + buildingType);
+                        buildingOptions[buildingType]--;
                     }
                 }
             }
         }
+        dirty = false;
         return impossibleActions;
     }
 
@@ -257,4 +293,30 @@ public class ColonyPlayer : Agent
 
         trader.dirty = true;
     } 
+
+    public Resource RemoveResource(Resource res = Resource.None)
+    {
+        if (res != Resource.None)
+        {
+            if (resources[res] < 1) { throw new Exception("Cannot remove " + res + " from " + name + " because stockpile is too low."); }
+            resources[res]--;
+            return res;
+        }
+
+        // Remove a random resource
+        else
+        {
+            int soFar = 0;
+            int totalres = TotalResources;
+            if (totalres == 0) { return Resource.None; }
+            int randomResIndex = UnityEngine.Random.Range(1, totalres);
+
+            foreach(KeyValuePair<Resource, int> pair in resources)
+            {
+                soFar += pair.Value;
+                if (soFar >= randomResIndex) { resources[pair.Key]--; return pair.Key; }     
+            }
+        }
+        return Resource.None;
+    }
 }

@@ -7,7 +7,7 @@ public class GameController : MonoBehaviour
 {
     public static GameController singleton = null;
 
-    public int pointsToWin = 12;
+    [Range(6, 12, order = 1)] public int pointsToWin = 12;
     [Range(1, 4, order = 1)] public int numberOfPlayers = 3;
     public float stepTime = 1f;
     private float stepTimer = 0f;
@@ -15,6 +15,8 @@ public class GameController : MonoBehaviour
     [SerializeField] private GameObject villagePrefab = null;
     [SerializeField] private GameObject cityPrefab = null;
     public GameObject streetPrefab = null;
+    [SerializeField] private GameObject robber = null;
+
     private BoardController bc = null;
     private PlayerManager pm = null;
     private UIController uic = null;
@@ -111,15 +113,31 @@ public class GameController : MonoBehaviour
 
     }
 
-
-
     public void PerformDiceRoll()
     {
         int dice = ThrowDice();
         uic.UpdateDiceRoll(dice);
         Notifier.singleton.Notify("Dice rolled! Outcome: " + dice);
-        GiveResourcesToPlayers(dice);
+        if(dice != 7) { GiveResourcesToPlayers(dice); }
+        else { ExecuteRobberPhase(); }
         uic.UpdateAllPlayers(pm.players);
+    }
+
+    private void ExecuteRobberPhase()
+    {
+        // Remove half of the resources (rounded down) of every player
+        pm.RemoveRobberResources();
+
+        // Move the robber to the best next tile
+        TileGridPoint bestLocation = bc.GetBestTileForRobber(pm.CurrentPlayer);
+        bc.RobberLocation = bestLocation;
+        robber.transform.position = bestLocation.position;
+
+        // Draw 1 resource of 1 random player and give it to the current player
+        ColonyPlayer randomPlayer = bc.GetRandomPlayerConnectedToTile(bestLocation, pm.CurrentPlayer);
+        Resource removedResource = randomPlayer.RemoveResource();
+        if (removedResource != Resource.None) { pm.CurrentPlayer.resources[removedResource]++; }
+        Notifier.singleton.Notify(pm.CurrentPlayer.name + " took " + removedResource + " from " + randomPlayer.name);
     }
 
     /// <summary>
@@ -200,6 +218,8 @@ public class GameController : MonoBehaviour
         List<Tile> relevantTiles = bc.GetTilesByNumber(diceRoll); // Get the tiles with this number
         foreach (Tile t in relevantTiles)
         {
+            // If the currentgridpoint has the robber on it, don't do anything
+            if (t.GridPoint.Robber) { continue; }
             HashSet<NonTileGridPoint> neighbouringGridPoints = t.GridPoint.ConnectedNTGPs; // Get all tiles where there is possibly a building
             foreach (NonTileGridPoint ntgp in neighbouringGridPoints)
             {

@@ -27,32 +27,7 @@ public class Tile : MonoBehaviour
     public void SetResource(Resource res, Sprite sprite)
     {
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
-        sr.sprite = sprite;
-        /*
-        switch (res)
-        {
-            case Enums.Resource.None:
-                sr.color = Color.black;
-                break;
-            case Enums.Resource.Wood:
-                sr.color = Color.green;
-                break;
-            case Enums.Resource.Stone:
-                sr.color = Color.red;
-                break;
-            case Enums.Resource.Wool:
-                sr.color = Color.white;
-                break;
-            case Enums.Resource.Grain:
-                sr.color = Color.yellow;
-                break;
-            case Enums.Resource.Ore:
-                sr.color = Color.gray;
-                break;
-            default:
-                break;
-        }
-        */ 
+        sr.sprite = sprite; 
         resource = res;
     }
 

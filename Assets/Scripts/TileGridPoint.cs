@@ -7,11 +7,28 @@ public class TileGridPoint : GridPoint
 {
     private HashSet<NonTileGridPoint> connectedNonTileGridPoints = new HashSet<NonTileGridPoint>();
     private Tile tile = null;
+    private bool robber = false;
 
     public TileGridPoint(Vector2 position, Vector2Int colRow)
     {
         this.position = position;
         this.colRow = colRow;
+    }
+
+    public bool Robber
+    {
+        get { return robber; }
+        set
+        {
+            if (BoardController.singleton.RobberLocation == this && !value)
+            {
+                throw new System.Exception("Cannot remove robber when we are the robber location!");
+            }
+            else
+            {
+                robber = value;
+            }
+        }
     }
 
     public Tile Tile

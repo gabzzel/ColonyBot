@@ -24,6 +24,7 @@ public class BoardController : MonoBehaviour
     public Dictionary<Vector2Int, TileGridPoint> tileGridPoints = new Dictionary<Vector2Int, TileGridPoint>();
     // The total value of every resource on the board. Calculated in DistributeNumbers()
     public Dictionary<Resource, float> TotalValues = new Dictionary<Resource, float>();
+    private TileGridPoint robberLocation = null;
 
     [SerializeField] private List<Tile> tiles = new List<Tile>();
 
@@ -54,6 +55,18 @@ public class BoardController : MonoBehaviour
             Enums.Resource.Wool
         };
     List<int> standardNumbers = new List<int> { 9, 3, 2, 3, 8, 4, 5, 5, 6, 0, 6, 10, 12, 11, 8, 9, 11, 4, 10 };
+
+    public TileGridPoint RobberLocation
+    {
+        get { return robberLocation; }
+        set
+        {
+            TileGridPoint oldLocation = robberLocation;
+            robberLocation = value;
+            robberLocation.Robber = true;
+            if (oldLocation != null) { oldLocation.Robber = false; }
+        }
+    }
 
     private void Awake()
     {
@@ -462,10 +475,19 @@ public class BoardController : MonoBehaviour
         return true;
     }
 
-    private bool PossibleStreetBuildingSite(NonTileGridPoint gp, ColonyPlayer player)
+    /// <summary>
+    /// Check whether a NTGP is eligle as a destination for a street.
+    /// </summary>
+    /// <param name="gp"> The destination of the street ("to"). </param>
+    /// <param name="player"> The player that is building the street. </param>
+    /// <returns> True if gp is eligible, False otherwise. </returns>
+    private bool PossibleStreetBuildingSite(NonTileGridPoint end, ColonyPlayer player)
     {
-        NonTileGridPoint ntgp = gp.FindConnectionWithPlayer(player);
-        return ntgp != null && ntgp.ConnectedNTGPs[gp] == null;
+        NonTileGridPoint start = end.FindConnectionWithPlayer(player); // The "from" / "start" point of the street
+        // 1. Our start must exist
+        // 2. There must not exist a street already between start and end
+        // 3. The "end" / "to" cannot be occupied by another player
+        return start != null && start.ConnectedNTGPs[end] == null && (end.Building == null || end.OccupiedBy(player));
     }
 
     private Sprite GetSpriteByResource(Resource res)
@@ -487,5 +509,53 @@ public class BoardController : MonoBehaviour
             default:
                 return null;
         }
+    }
+
+    public TileGridPoint GetBestTileForRobber(ColonyPlayer player)
+    {
+        TileGridPoint best = null;
+        float highest = float.MinValue;
+
+        foreach(TileGridPoint tgp in tileGridPoints.Values)
+        {
+            // We cannot place the robber on the current location
+            if(tgp == RobberLocation) { continue; }
+
+            float value = 0f;
+            foreach(NonTileGridPoint ntgp in tgp.ConnectedNTGPs)
+            {
+                // If there is no building here, just skip this one.
+                if(ntgp.Building == null) { continue; }
+                if (!ntgp.OccupiedBy(player))
+                {
+                    float multi = ntgp.Building.Type == BuildingType.City ? 2f : 1f;
+                    // Possibly multiplied by the points of the player?
+                    value += tgp.Value * multi;
+                }
+            }
+
+            if(value > highest)
+            {
+                best = tgp;
+                highest = value;
+            }
+        }
+
+        return best;
+    }
+
+    public ColonyPlayer GetRandomPlayerConnectedToTile(TileGridPoint tgp, ColonyPlayer player)
+    {
+        List<ColonyPlayer> players = new List<ColonyPlayer>();
+        foreach(NonTileGridPoint ntgp in tgp.ConnectedNTGPs)
+        {
+            if (ntgp.Building != null && !ntgp.OccupiedBy(player))
+            {
+                players.Add(ntgp.Building.Owner);
+            }
+        }
+
+        if(players.Count == 0) { throw new System.Exception("Cannot return player when no players are connected to " + tgp.ToString()); }
+        return players[Random.Range(0, players.Count)];
     }
 }

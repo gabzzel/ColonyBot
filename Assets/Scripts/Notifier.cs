@@ -21,7 +21,7 @@ public class Notifier : MonoBehaviour
     public void Notify(string text)
     {
         GameObject notification = Instantiate(notificationPrefab, transform);
-        notification.transform.SetAsFirstSibling();
+        notification.transform.SetAsFirstSibling(); 
         notification.GetComponent<Text>().text = "[" + Mathf.Round(Time.time) + "s] : " + text;
         this.GetComponent<RectTransform>().sizeDelta = new Vector2(GetComponent<RectTransform>().sizeDelta.x ,Mathf.Max(300f, transform.childCount * notificationPrefab.GetComponent<RectTransform>().rect.height));
     }

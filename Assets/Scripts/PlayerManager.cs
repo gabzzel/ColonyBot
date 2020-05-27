@@ -106,4 +106,18 @@ public class PlayerManager : MonoBehaviour
     {
         GameController.singleton.EndGame(player);
     }
+
+    public void RemoveRobberResources()
+    {
+        foreach(ColonyPlayer player in players)
+        {
+            if(player.resources == null || player.TotalResources <= 7) { continue; }
+            int toRemove = Mathf.FloorToInt(player.TotalResources / 2f);
+
+            for (int i = 0; i < toRemove; i++)
+            {
+                player.RemoveResource();
+            }
+        }
+    }
 }

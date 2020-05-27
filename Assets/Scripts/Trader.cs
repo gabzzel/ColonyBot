@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using static Enums;
 
@@ -7,7 +8,7 @@ public class Trader : MonoBehaviour
     public bool dirty = false;
     public bool isBank = false;
     List<Trader> otherTraders = new List<Trader>();
-    Dictionary<Resource, float> resourceValues = new Dictionary<Resource, float>();
+    Dictionary<Resource, float> resourceValues;
     Dictionary<Resource, float> availability = new Dictionary<Resource, float>();
     float availabilityMax = 1f;
     Dictionary<Resource, float> usefulness = new Dictionary<Resource, float>();
@@ -35,12 +36,17 @@ public class Trader : MonoBehaviour
     public void Initialize()
     {
         resourceValues = Enums.DefaultResDictFloat;
+        availability = Enums.DefaultResDictFloat;
+        usefulness = Enums.DefaultResDictFloat;
+        availabilityMax = 1f;
+        useFulnessMax = 1f;
+        mean = 0.5f;
     }
 
     public void UpdateResourceValues()
     {
         List<Resource> resources = Enums.GetResourcesAsList();
-
+        mean = 0.5f;
         /* Availability */
         availability = Enums.DefaultResDictFloat;
         foreach (Building building in player.Buildings)
@@ -62,13 +68,14 @@ public class Trader : MonoBehaviour
         // (> available) means (< value)
         foreach (Resource res in resources)
         {
-            if (availability[res] == 0 || player.resources[res] == 0 || availabilityMax == float.MinValue) { availability[res] = 1f; }
-            else { availability[res] = 1f / ((availability[res] / availabilityMax) * player.resources[res]); }
+            availability[res] = CalculateAvailabilityValue(res, player.resources[res]);
+            //if (availability[res] == 0 || player.resources[res] == 0 || availabilityMax == float.MinValue) { availability[res] = 1f; }
+            //else { availability[res] = 1f / ((availability[res] / availabilityMax) * player.resources[res]); }
         }
 
         /* Usefulness */
-        usefulness = Enums.DefaultResDictFloat;
-        foreach (KeyValuePair<BuildingType, int> pair in player.availableBuildings)
+        usefulness = DefaultResDictFloat;
+        foreach (KeyValuePair<BuildingType, int> pair in player.buildingOptions)
         {
             switch (pair.Key)
             {
@@ -97,9 +104,9 @@ public class Trader : MonoBehaviour
         {
             usefulness[res] /= useFulnessMax;
             resourceValues[res] = usefulness[res] * availability[res];
-            mean += resourceValues[res];
+            //mean += resourceValues[res];
         }
-        mean /= resources.Count;
+        //mean /= resources.Count;
         dirty = false;
     }
 
@@ -109,12 +116,18 @@ public class Trader : MonoBehaviour
         //List<Proposal> props = GetAllPossibleProposals(true);
         UpdateResourceValues();
         SortedList<float, Proposal> props = GetAllPossibleProposals();
-
-        while (props.Count > 0)
+        int tries = 0;
+        while (props.Count > 0 && tries < 1000)
         {
+            tries++;
             if (dirty) { UpdateResourceValues(); } // Update our resource values before trading
-            Proposal prop = props[0]; // Get the best proposal for us
-            props.RemoveAt(0); // Remove it from the list
+            Proposal prop = props.Values[props.Count - 1]; // Get the best proposal for us
+            props.RemoveAt(props.Count - 1); // Remove it from the list
+
+            if(prop.numToGive == 4 && prop.numToTake == 1)
+            {
+                int dsbahiukdsa = 0;
+            }
 
             // Propose it to all other traders
             foreach (Trader t in otherTraders)
@@ -143,43 +156,70 @@ public class Trader : MonoBehaviour
         else if (isBank) { return false; }
 
         // Accept everything for now, if we can afford it
-        if(player.resources[proposal.resToTake] < proposal.numToTake) { return false; }
-        return true; // TODO!
+        if (player.resources[proposal.resToTake] < proposal.numToTake) { return false; }
+        else if(WeighProposal(proposal) > 0f)
+        {
+            player.resources[proposal.resToTake] -= proposal.numToTake;
+            player.resources[proposal.resToGive] += proposal.numToGive;
+            return true; // TODO!
+        }
+        return false;
     }
 
     public SortedList<float, Proposal> GetAllPossibleProposals()
     {
-        SortedList<float, Proposal> proposals = new SortedList<float, Proposal>();
-        // Go through all resources
-        foreach (Resource res in GetResourcesAsList())
-        {
-            // Go through all resources again
-            foreach (Resource res2 in GetResourcesAsList())
-            {
-                if (res2 == res) { continue; } // We can't trade the same resources against each other
+        float max = float.MinValue;
+        Resource maxRes = Resource.None;
 
-                // The minimal trade is 1 for 1, the max = 4 for 4
-                for (int i = 1; i <= 4; i++)
-                {
-                    for (int j = 1; j <= 4; j++)
-                    {
-                        Proposal prop = new Proposal(res, res2, i, j);
-                        float value = WeighOwnProposal(prop);
-                        if(value > 0f) { proposals.Add(value, prop); }
-                    }
-                }
+        float min = float.MaxValue;
+        Resource minRes = Resource.None;
+
+
+        // Determine the resource that is most valuable and the resource that is the least valuable
+        foreach (KeyValuePair<Resource, float> pair in resourceValues)
+        {
+            if (pair.Value > max)
+            {
+                max = pair.Value;
+                maxRes = pair.Key;
+            }
+            else if (pair.Value < min && player.resources[pair.Key] >= 1)
+            {
+                min = pair.Value;
+                minRes = pair.Key;
             }
         }
+
+        if(maxRes == Resource.None || minRes == Resource.None || maxRes == minRes) { return new SortedList<float, Proposal>(); }
+
+        SortedList<float, Proposal> proposals = new SortedList<float, Proposal>();
+
+        // Our number to give has a minimum of 1
+        for (int numToGive = 1; numToGive <= 4; numToGive++)
+        {
+            if(numToGive > player.resources[minRes]) { continue; }
+            // Trades do to 4 maximum. A trade of 4 to 1 is only accepted by the bank
+            for (int numToTake = 1; numToTake <= 4; numToTake++)
+            {
+                Proposal prop = new Proposal(minRes, maxRes, numToGive, numToTake);
+                float value = WeighOwnProposal(prop);
+                if (value > 0f && !proposals.ContainsKey(value)) { proposals.Add(value, prop); }
+            }
+        }
+
         return proposals;
     }
 
     // Calculate the value of a resource at a hypothetical number of available resources of the type res
-    private float CalculateValue(Resource res, int number)
+    private float CalculateAvailabilityValue(Resource res, int number)
     {
+        if (availability[res] == 0 || number == 0 || this.availabilityMax == float.MinValue) { return 1f; }
+        else { return 1f / (availability[res] / (this.availabilityMax * number)); }
+
         // x = (... / availabilityMax)
-        float x = (1f / availability[res]) / player.resources[res];
-        float _new = x * number; // The availability value if we would have 'number' amount of resources of this type
-        return _new;
+        //float x = (1f / availability[res]) / player.resources[res];
+        //float _new = x * number; // The availability value if we would have 'number' amount of resources of this type
+        //return _new;
     }
 
     private float WeighOwnProposal(Proposal proposal)
@@ -192,8 +232,8 @@ public class Trader : MonoBehaviour
         // Give is GIVEN TO US, take is TAKEN FROM US!
 
         // Our hypothetical value of the given and taken resources if the proposal would go through
-        float newGive = CalculateValue(proposal.resToGive, player.resources[proposal.resToGive] + proposal.numToGive);
-        float newTake = CalculateValue(proposal.resToTake, player.resources[proposal.resToTake] - proposal.numToTake);
+        float newGive = CalculateAvailabilityValue(proposal.resToGive, player.resources[proposal.resToGive] + proposal.numToGive) * usefulness[proposal.resToGive];
+        float newTake = CalculateAvailabilityValue(proposal.resToTake, Math.Max(player.resources[proposal.resToTake] - proposal.numToTake, 0)) * usefulness[proposal.resToTake];
 
         // The differences with the mean of the current and hypothetical 'new' values
         float oldGiveDiff = Mathf.Abs(mean - resourceValues[proposal.resToGive]);
@@ -219,6 +259,13 @@ public class Proposal
     public int numToGive = 1; // The amount of resources the proposer is willing to give
     public int numToTake = 1; // The amount of resources the proposer want to get
 
+    /// <summary>
+    /// Create a new Proposal.
+    /// </summary>
+    /// <param name="rtg"> The resource the proposer wants to give in this trade. </param>
+    /// <param name="rtt"> The resource the proposal wants to gain from the trade. </param>
+    /// <param name="ntg"> The number of resources the proposer is willing to give. </param>
+    /// <param name="ntt"> The number of resources the proposer want to get in this trade. </param>
     public Proposal(Resource rtg, Resource rtt, int ntg, int ntt)
     {
         if (rtg == rtt) { throw new System.Exception("Cannot create proposal with the same resources as give and take!"); }
@@ -227,9 +274,33 @@ public class Proposal
         this.numToGive = ntg;
         this.numToTake = ntt;
     }
+    public override string ToString()
+    {
+        return numToGive + " " + resToGive + " => " + numToTake + " " + resToTake;
+    }
 
     public string ToString(Trader from, Trader to)
     {
         return numToGive + " " + resToGive + " (" + from.ToString() + ") => " + numToTake + " " + resToTake + " (" + to.ToString() + ")";
+    }
+
+    public static bool operator ==(Proposal p1, Proposal p2)
+    {
+        return p1.resToGive == p2.resToGive && p1.resToTake == p2.resToTake && p1.numToGive == p2.numToGive && p1.numToTake == p2.numToTake;
+    }
+
+    public static bool operator !=(Proposal p1, Proposal p2)
+    {
+        return !(p1 == p2);
+    }
+
+    public override bool Equals(object obj)
+    {
+        return this == (Proposal)obj;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 }
