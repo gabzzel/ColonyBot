@@ -1,15 +1,12 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UI;
-using static Enums;
+using static Utility;
 
 [System.Serializable]
 public class Tile : MonoBehaviour
 {
     [SerializeField] private Text text = null;
-    private Resource resource = Resource.None;
-    private int number = 0;
-    private float value = 0f;
     private TileGridPoint gridPoint = null;
 
     public TileGridPoint GridPoint
@@ -20,20 +17,19 @@ public class Tile : MonoBehaviour
             if(gridPoint == null) { gridPoint = value; }
         }
     }
-    public Resource Resource { get { return resource; } }
-    public int Number { get { return number; } }
-    public float Value { get { return value; } }
+    public int Resource { get; private set; } = Desert;
+    public int Number { get; private set; } = 0;
+    public float Value { get; private set; } = 0f;
 
-    public void SetResource(Resource res, Sprite sprite)
+    public void SetResource(int resourceID)
     {
-        SpriteRenderer sr = GetComponent<SpriteRenderer>();
-        sr.sprite = sprite; 
-        resource = res;
+        GetComponent<SpriteRenderer>().sprite = BoardController.singleton.ResourceSprites[resourceID];
+        Resource = resourceID;
     }
 
     public void SetNumber(int number)
     {
-        this.number = number;
+        this.Number = number;
 
         if (number != 0)
         {
@@ -50,7 +46,7 @@ public class Tile : MonoBehaviour
                 text.fontSize = 30;
             }
 
-            this.value = (6f - Mathf.Abs(7f - number)) / 36f;
+            this.Value = (6f - Mathf.Abs(7f - number)) / 36f;
         }
         else
         {
@@ -59,26 +55,26 @@ public class Tile : MonoBehaviour
     }
 
     public List<Tile> GetNeighbouringTiles()
-    {
+    { 
         List<Tile> result = new List<Tile>();
-
-        // Get all connected NonTileGridPoints
-        foreach(NonTileGridPoint ntgp in gridPoint.ConnectedNTGPs)
+        foreach(int neighbourIndex in gridPoint.connectedIndexes)
         {
-            // Get all second level neighbours
-            foreach(TileGridPoint tgp in ntgp.ConnectedTGPs)
+            GridPoint gp = BoardController.singleton.allGridPoints[neighbourIndex];
+            foreach(int secondDegreeIndex in gp.connectedIndexes)
             {
-                // If we are not looking at ourselves and it has a tile...
-                if(tgp != gridPoint) { result.Add(tgp.Tile); }
-                
+                if (neighbourIndex != gridPoint.index && BoardController.tgpIndexes.Contains(secondDegreeIndex))
+                {
+                    result.Add(((TileGridPoint)BoardController.singleton.allGridPoints[secondDegreeIndex]).Tile);
+                }
             }
         }
+
         return result;
     }
 
     public override string ToString()
     {
-        return "Tile @ " + gridPoint.colRow.ToString() + ": " + resource.ToString() + " - " + number;
+        return "Tile @ " + gridPoint.position.ToString() + ": " + Resource.ToString() + " - " + Number;
     }
 }
 

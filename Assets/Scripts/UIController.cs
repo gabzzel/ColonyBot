@@ -1,8 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Unity.MLAgents;
 using UnityEngine;
 using UnityEngine.UI;
-using static Enums;
+using static Utility;
 
 public class UIController : MonoBehaviour
 {
@@ -10,17 +11,13 @@ public class UIController : MonoBehaviour
     public static UIController singleton = null;
 
     public List<GameObject> players = new List<GameObject>();
-    private GameController gc = null;
     [SerializeField] private Text diceRollText = null;
     [SerializeField] private Text stepText = null;
-
-    private int steps = 0;
 
     private void Awake()
     {
         if(singleton == null) { singleton = this; }
         else { Destroy(this); }
-        gc = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();        
     }
 
     public void Initialize(List<ColonyPlayer> ps)
@@ -28,16 +25,11 @@ public class UIController : MonoBehaviour
         // Set the player UI active based on the number of players
         for (int i = 0; i < players.Count; i++)
         {
-            players[i].SetActive(i < GameController.singleton.numberOfPlayers);
+            players[i].SetActive(i < GameController.singleton.numberOfPlayers && GameController.singleton.showUI);
         }
 
         UpdateAllPlayers(ps);
         UpdateDiceRoll(0);
-    }
-
-    public void NewGame()
-    {
-        gc.NewGame();
     }
 
     /// <summary>
@@ -46,6 +38,7 @@ public class UIController : MonoBehaviour
     /// <param name="ps"> The list of all players </param>
     public void UpdateAllPlayers(List<ColonyPlayer> ps)
     {
+        if (!GameController.singleton.showUI) { return; }
         for (int i = 0; i < GameController.singleton.numberOfPlayers; i++)
         {
             UpdatePlayer(players[i], ps[i]);
@@ -66,19 +59,21 @@ public class UIController : MonoBehaviour
         background.SetAllDirty();
         pui.name.text = p.name;
         pui.points.text = "P: " + p.Points;
-        pui.wood.text = "Wd: " + p.resources[Resource.Wood];
-        pui.ore.text = "Or: " + p.resources[Resource.Ore];
-        pui.wool.text = "Wl: " + p.resources[Resource.Wool];
-        pui.grain.text = "Gr: " + p.resources[Resource.Grain];
-        pui.stone.text = "St: " + p.resources[Resource.Stone];
+        pui.wood.text = "Wd: " + p.resources[Wood];
+        pui.ore.text = "Or: " + p.resources[Ore];
+        pui.wool.text = "Wl: " + p.resources[Wool];
+        pui.grain.text = "Gr: " + p.resources[Grain];
+        pui.stone.text = "St: " + p.resources[Stone];
+        pui.knights.text = "Kn.: " + p.availableKnights + " / " + p.usedKnights;
+        pui.knights.color = p.LargestArmy ? Color.green : Color.black;
+        pui.VPC.text = "VPC: " + p.developmentPoints;
     }
 
-    public void NotifyOfBuilding(int i, Building b)
+    public void NotifyOfBuilding(int playerID, string message)
     {
-        if(b == null) { throw new System.NullReferenceException("Building b is null!"); }
-        PlayerUI pui = players[i].GetComponent<PlayerUI>();
+        PlayerUI pui = players[playerID].GetComponent<PlayerUI>();
         Text text = pui.buildings;
-        text.text += b.ToString() + " #" + steps + "\n";
+        text.text += message + " #" + Academy.Instance.StepCount + "\n";
     }
 
     public void UpdateDiceRoll(int result)
@@ -94,9 +89,8 @@ public class UIController : MonoBehaviour
         
     }
 
-    public void UpdateStepText(int steps)
+    public void UpdateStepText()
     {
-        stepText.text = "Steps: (#" + steps + ")";
-        this.steps = steps;
+        stepText.text = "E " + Academy.Instance.EpisodeCount + " S " + Academy.Instance.StepCount;
     }
 }

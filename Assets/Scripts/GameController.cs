@@ -1,14 +1,16 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-using static Enums;
+using static Utility;
 using Unity.MLAgents;
-
+using Unity.Mathematics;
+using Random = UnityEngine.Random;
 public class GameController : MonoBehaviour
 {
     public static GameController singleton = null;
 
     [Range(6, 12, order = 1)] public int pointsToWin = 12;
     [Range(1, 4, order = 1)] public int numberOfPlayers = 3;
+    public bool showUI = true;
     public float stepTime = 1f;
     private float stepTimer = 0f;
 
@@ -22,6 +24,8 @@ public class GameController : MonoBehaviour
     private UIController uic = null;
 
     [SerializeField] private bool gameStarted = false;
+    public int[] availableResources = new int[5];
+    private int[] developmentCards = new int[3];
 
     public bool GameStarted { get { return gameStarted; } }
 
@@ -59,8 +63,8 @@ public class GameController : MonoBehaviour
         EnvironmentParameters ep = Academy.Instance.EnvironmentParameters;
         numberOfPlayers = Mathf.FloorToInt(ep.GetWithDefault("number_of_players", 4f));
         pointsToWin = Mathf.FloorToInt(ep.GetWithDefault("points_to_win", 12f));
-        bc.useStandard = ep.GetWithDefault("standard_board", 0f) == 1 ? true : false;
-        bc.allowHighChanceNeighbours = ep.GetWithDefault("allow_high_chance_neighbours", 0f) == 1 ? true : false;
+        bc.useStandard = ep.GetWithDefault("standard_board", 0f) == 1;
+        bc.allowHighChanceNeighbours = ep.GetWithDefault("allow_high_chance_neighbours", 0f) == 1;
         stepTime = Mathf.Max(ep.GetWithDefault("step_time", 1f), 0);
     }
 
@@ -71,6 +75,8 @@ public class GameController : MonoBehaviour
             throw new System.Exception("Cannot start game without an initialized academy!");
         }
 
+        availableResources = new int[] { 19, 19, 19, 19, 19 };
+        developmentCards = new int[] { 14, 5, 6 };
         Notifier.singleton.Notify("New Game Started!");
         // 1. Create a new board
         bc.CreateFilledBoard();
@@ -107,7 +113,7 @@ public class GameController : MonoBehaviour
         // Request an action from the current player. This also gives the turn to the next player and rolls the dice
         pm.RequestAction();        
 
-        uic.UpdateStepText(Academy.Instance.StepCount);
+        uic.UpdateStepText();
         uic.UpdateAllPlayers(pm.players);
         Academy.Instance.EnvironmentStep();
 
@@ -119,14 +125,14 @@ public class GameController : MonoBehaviour
         uic.UpdateDiceRoll(dice);
         Notifier.singleton.Notify("Dice rolled! Outcome: " + dice);
         if(dice != 7) { GiveResourcesToPlayers(dice); }
-        else { ExecuteRobberPhase(); }
+        else { ExecuteRobberPhase(false); }
         uic.UpdateAllPlayers(pm.players);
     }
 
-    private void ExecuteRobberPhase()
+    public void ExecuteRobberPhase(bool knight)
     {
-        // Remove half of the resources (rounded down) of every player
-        pm.RemoveRobberResources();
+        // Remove half of the resources (rounded down) of every player, if we are not playing a knight
+        if (!knight) { pm.RemoveRobberResources(); }
 
         // Move the robber to the best next tile
         TileGridPoint bestLocation = bc.GetBestTileForRobber(pm.CurrentPlayer);
@@ -135,9 +141,9 @@ public class GameController : MonoBehaviour
 
         // Draw 1 resource of 1 random player and give it to the current player
         ColonyPlayer randomPlayer = bc.GetRandomPlayerConnectedToTile(bestLocation, pm.CurrentPlayer);
-        Resource removedResource = randomPlayer.RemoveResource();
-        if (removedResource != Resource.None) { pm.CurrentPlayer.resources[removedResource]++; }
-        Notifier.singleton.Notify(pm.CurrentPlayer.name + " took " + removedResource + " from " + randomPlayer.name);
+        int removedResource = randomPlayer.RemoveResource();
+        if (removedResource != Desert) { pm.CurrentPlayer.resources[removedResource]++; }
+        Notifier.singleton.Notify(pm.CurrentPlayer.name + " took " + ResourceNames[removedResource] + " from " + randomPlayer.name);
     }
 
     /// <summary>
@@ -151,20 +157,38 @@ public class GameController : MonoBehaviour
         return dice1 + dice2;
     }
 
+    public void DrawDevelopmentCard(ColonyPlayer player)
+    {
+        int total = 0;
+        foreach(int x in developmentCards) { total += x; }
+        int random = Random.Range(0, total);
+        total = 0;
+        for (int i = 0; i < developmentCards.Length; i++)
+        {
+            total += developmentCards[i];
+            if(total >= random) { total = i; break; }
+        }
+        
+        if(total == Knight) { player.availableKnights++; developmentCards[Knight]--; }
+        else if(total == VictoryPoint) { player.AddReward(1); player.developmentPoints++; developmentCards[VictoryPoint]--; }
+
+        // If we draw an ususable card, we do nothing!
+    }
+
     public Building CreateVillageOrCity(NonTileGridPoint ntgp, bool city, ColonyPlayer cp)
     {
         if (ntgp == null) { throw new System.Exception("Cannot create village on null Gridpoint!"); }
 
-        GameObject villageObject = null;
-
+        GameObject villageObject;
         if (city)
         {
-            if (ntgp.Building == null || ntgp.Building.Type != BuildingType.Village)
+            if (ntgp.Building == null || ntgp.Building.Type != Village)
             {
                 throw new System.Exception("Cannot build a city on " + ntgp.ToString() + " because there is no village here.");
             }
             Destroy(ntgp.Building.gameObject); // Destroy the current village here.
             villageObject = Instantiate(cityPrefab, ntgp.position, Quaternion.identity, cp.transform);
+            availableResources[Ore] += 3; availableResources[Grain] += 2;
         }
         else
         {
@@ -173,6 +197,7 @@ public class GameController : MonoBehaviour
                 throw new System.Exception("Cannot build a village on " + ntgp.ToString() + " because there is already something there!");
             }
             villageObject = Instantiate(villagePrefab, ntgp.position, Quaternion.identity, cp.transform);
+            availableResources[Stone] += 1; availableResources[Wood] += 1; availableResources[Grain] += 1; availableResources[Wool] += 1;
         }
 
         Building building = villageObject.GetComponent<Building>();
@@ -180,7 +205,7 @@ public class GameController : MonoBehaviour
         ntgp.Building = building; // Set the gridpoint reference to the new building
         building.Position = ntgp;
         cp.AddReward(1f); // Add a reward to the player
-        uic.NotifyOfBuilding(pm.players.IndexOf(cp), building);
+        uic.NotifyOfBuilding(cp.ID, building.Type.ToString()[0] + " @ " + ntgp.index);
         return building;
     }
 
@@ -189,13 +214,15 @@ public class GameController : MonoBehaviour
     /// </summary>
     /// <param name="dest"> Where the street will go to. </param>
     /// <param name="cp"> For which player the street will be build </param>
-    public Building CreateStreet(NonTileGridPoint dest, ColonyPlayer cp, NonTileGridPoint start = null)
+    public Building CreateStreet(NonTileGridPoint dest, ColonyPlayer cp)
     {
         if (dest == null) { throw new System.Exception("Cannot create street to null GridPoint!"); }
 
-        start = dest.FindConnectionWithPlayer(cp);
+        NonTileGridPoint start = dest.OccupiedNeighbour(cp.ID);
 
-        if (start == null) { throw new System.Exception("Cannot build a street from nowhere..."); }
+        if (start == null) { start = dest.NeighbourWithConnectionToPlayer(cp.ID); }
+
+        if (start == null) { throw new System.Exception("Cannot build a street from nowhere!"); }
 
         Vector2 position = new Vector2((dest.position.x - start.position.x) / 2f, (dest.position.y - start.position.y) / 2f) + start.position;
         float rotation = 90f;
@@ -207,9 +234,10 @@ public class GameController : MonoBehaviour
         GameObject street = Instantiate(streetPrefab, position, Quaternion.Euler(0, 0, rotation), cp.transform);
         Building b = street.GetComponent<Building>();
         b.Owner = cp;
-        dest.Connect(start, b);
-        start.Connect(dest, b);
-        uic.NotifyOfBuilding(pm.players.IndexOf(cp), b);
+        dest.Connect(start.index, b);
+        start.Connect(dest.index, b);
+        uic.NotifyOfBuilding(cp.ID, "S : " + start.index + " to " + dest.index);
+        availableResources[Wood] += 1; availableResources[Stone] += 1;
         return b;
     }
 
@@ -220,15 +248,21 @@ public class GameController : MonoBehaviour
         {
             // If the currentgridpoint has the robber on it, don't do anything
             if (t.GridPoint.Robber) { continue; }
-            HashSet<NonTileGridPoint> neighbouringGridPoints = t.GridPoint.ConnectedNTGPs; // Get all tiles where there is possibly a building
-            foreach (NonTileGridPoint ntgp in neighbouringGridPoints)
+            HashSet<int> neighbouringGridPoints = t.GridPoint.connectedIndexes; // Get all tiles where there is possibly a building
+            foreach (int ntgpIndex in neighbouringGridPoints)
             {
-                if (ntgp.Building != null)
+                if (BoardController.ntgpIndexes.Contains(ntgpIndex))
                 {
-                    Building b = ntgp.Building;
-                    int number = b.Type == BuildingType.Village ? 1 : 2;
-                    b.Owner.GiveResources(t.Resource, number);
+                    NonTileGridPoint ntgp = (NonTileGridPoint)BoardController.singleton.allGridPoints[ntgpIndex];
+                    // If we don't have enough resources to pay someone, we don't. 
+                    if (ntgp.Building != null && availableResources[t.Resource] >= ntgp.Building.Type)
+                    {
+                        Building b = ntgp.Building;
+                        b.Owner.GiveResources(t.Resource, b.Type);
+                        availableResources[t.Resource] -= b.Type;
+                    }
                 }
+                
             }
         }
     }

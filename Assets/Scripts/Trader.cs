@@ -1,17 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using static Enums;
+using static Utility;
 
 public class Trader : MonoBehaviour
 {
     public bool dirty = false;
     public bool isBank = false;
     List<Trader> otherTraders = new List<Trader>();
-    Dictionary<Resource, float> resourceValues;
-    Dictionary<Resource, float> availability = new Dictionary<Resource, float>();
+
+    private float[] resourceValues = new float[5];
+    private float[] availability = new float[5];
     float availabilityMax = 1f;
-    Dictionary<Resource, float> usefulness = new Dictionary<Resource, float>();
+    private float[] usefulness = new float[5];
     float useFulnessMax = 1f;
 
     float mean = 0.5f;
@@ -35,9 +36,9 @@ public class Trader : MonoBehaviour
 
     public void Initialize()
     {
-        resourceValues = Enums.DefaultResDictFloat;
-        availability = Enums.DefaultResDictFloat;
-        usefulness = Enums.DefaultResDictFloat;
+        resourceValues = new float[5];
+        availability = new float[5];
+        usefulness = new float[5];
         availabilityMax = 1f;
         useFulnessMax = 1f;
         mean = 0.5f;
@@ -45,70 +46,55 @@ public class Trader : MonoBehaviour
 
     public void UpdateResourceValues()
     {
-        List<Resource> resources = Enums.GetResourcesAsList();
         mean = 0.5f;
         /* Availability */
-        availability = Enums.DefaultResDictFloat;
+        availability = new float[5];
         foreach (Building building in player.Buildings)
         {
-            if (building.Type == BuildingType.Street) { continue; }
-            float multi = building.Type == BuildingType.City ? 2f : 1f;
+            if (building.Type == Street) { continue; }
             NonTileGridPoint ntgp = building.Position;
-            foreach (Resource r in resources)
-            {
-                availability[r] += ntgp.ResourceValue(r) * multi;
-            }
 
+            for (int resourceID = 0; resourceID < player.resources.Length; resourceID++)
+            {
+                availability[resourceID] += ntgp.ResourceValue(resourceID) * building.Type;
+            }
         }
         availabilityMax = float.MinValue;
         // Determine max value for normalisation
-        foreach (Resource res in resources) { if (availability[res] > availabilityMax) { availabilityMax = availability[res]; } }
-        // Normalize the availability and multiply by our current resources in hand. 
-        // We divide 1 by the availability because the value of the resource is the opposite of the avaibility.
-        // (> available) means (< value)
-        foreach (Resource res in resources)
+
+        for (int i = 0; i < availability.Length; i++)
         {
-            availability[res] = CalculateAvailabilityValue(res, player.resources[res]);
-            //if (availability[res] == 0 || player.resources[res] == 0 || availabilityMax == float.MinValue) { availability[res] = 1f; }
-            //else { availability[res] = 1f / ((availability[res] / availabilityMax) * player.resources[res]); }
+            if (availability[i] > availabilityMax) { availabilityMax = availability[i]; }
+
+            // Normalize the availability and multiply by our current resources in hand. 
+            // We divide 1 by the availability because the value of the resource is the opposite of the avaibility.
+            // (> available) means (< value)
+
+            for (int resourceID = 0; resourceID < player.resources.Length; resourceID++)
+            {
+                availability[resourceID] = CalculateAvailabilityValue(resourceID, player.resources[resourceID]);
+            }
+
+        }
+        /* Usefulness */
+        usefulness = new float[5];
+        usefulness[Wood] += player.buildingOptions[Village] + player.buildingOptions[Street];
+        usefulness[Stone] += player.buildingOptions[Village] + player.buildingOptions[Street];
+        usefulness[Wool] += player.buildingOptions[Village];
+        usefulness[Grain] += player.buildingOptions[Village] + 2 * player.buildingOptions[City];
+        usefulness[Ore] += 3 * player.buildingOptions[City];
+
+        useFulnessMax = Max(usefulness);
+
+        for (int i = 0; i < usefulness.Length; i++)
+        {
+            usefulness[i] /= useFulnessMax;
+            resourceValues[i] = usefulness[i] * availability[i];
         }
 
-        /* Usefulness */
-        usefulness = DefaultResDictFloat;
-        foreach (KeyValuePair<BuildingType, int> pair in player.buildingOptions)
-        {
-            switch (pair.Key)
-            {
-                case BuildingType.Street:
-                    usefulness[Resource.Wood] += pair.Value;
-                    usefulness[Resource.Stone] += pair.Value;
-                    break;
-                case BuildingType.Village:
-                    usefulness[Resource.Wood] += pair.Value;
-                    usefulness[Resource.Stone] += pair.Value;
-                    usefulness[Resource.Wool] += pair.Value;
-                    usefulness[Resource.Grain] += pair.Value;
-                    break;
-                case BuildingType.City:
-                    usefulness[Resource.Grain] += 2f * pair.Value;
-                    usefulness[Resource.Ore] += 3f * pair.Value;
-                    break;
-                default:
-                    break;
-            }
-        }
-        useFulnessMax = float.MinValue;
-        // Normalize
-        foreach (Resource res in resources) { if (usefulness[res] > useFulnessMax) { useFulnessMax = usefulness[res]; } }
-        foreach (Resource res in resources)
-        {
-            usefulness[res] /= useFulnessMax;
-            resourceValues[res] = usefulness[res] * availability[res];
-            //mean += resourceValues[res];
-        }
-        //mean /= resources.Count;
         dirty = false;
     }
+
 
     public void StartTrading()
     {
@@ -123,11 +109,6 @@ public class Trader : MonoBehaviour
             if (dirty) { UpdateResourceValues(); } // Update our resource values before trading
             Proposal prop = props.Values[props.Count - 1]; // Get the best proposal for us
             props.RemoveAt(props.Count - 1); // Remove it from the list
-
-            if(prop.numToGive == 4 && prop.numToTake == 1)
-            {
-                int dsbahiukdsa = 0;
-            }
 
             // Propose it to all other traders
             foreach (Trader t in otherTraders)
@@ -157,7 +138,7 @@ public class Trader : MonoBehaviour
 
         // Accept everything for now, if we can afford it
         if (player.resources[proposal.resToTake] < proposal.numToTake) { return false; }
-        else if(WeighProposal(proposal) > 0f)
+        else if (WeighProposal(proposal) > 0f)
         {
             player.resources[proposal.resToTake] -= proposal.numToTake;
             player.resources[proposal.resToGive] += proposal.numToGive;
@@ -169,35 +150,27 @@ public class Trader : MonoBehaviour
     public SortedList<float, Proposal> GetAllPossibleProposals()
     {
         float max = float.MinValue;
-        Resource maxRes = Resource.None;
+        int maxRes = Desert;
 
         float min = float.MaxValue;
-        Resource minRes = Resource.None;
+        int minRes = Desert;
 
-
-        // Determine the resource that is most valuable and the resource that is the least valuable
-        foreach (KeyValuePair<Resource, float> pair in resourceValues)
+        for (int resourceID = 0; resourceID < resourceValues.Length; resourceID++)
         {
-            if (pair.Value > max)
-            {
-                max = pair.Value;
-                maxRes = pair.Key;
-            }
-            else if (pair.Value < min && player.resources[pair.Key] >= 1)
-            {
-                min = pair.Value;
-                minRes = pair.Key;
-            }
+            float value = resourceValues[resourceID];
+            if(value > max) { max = value; maxRes = resourceID; }
+            else if(value < min && player.resources[resourceID] >= 1) { min = value; minRes = resourceID; }
         }
 
-        if(maxRes == Resource.None || minRes == Resource.None || maxRes == minRes) { return new SortedList<float, Proposal>(); }
+
+        if (maxRes == Desert || minRes == Desert || maxRes == minRes) { return new SortedList<float, Proposal>(); }
 
         SortedList<float, Proposal> proposals = new SortedList<float, Proposal>();
 
         // Our number to give has a minimum of 1
         for (int numToGive = 1; numToGive <= 4; numToGive++)
         {
-            if(numToGive > player.resources[minRes]) { continue; }
+            if (numToGive > player.resources[minRes]) { continue; }
             // Trades do to 4 maximum. A trade of 4 to 1 is only accepted by the bank
             for (int numToTake = 1; numToTake <= 4; numToTake++)
             {
@@ -211,10 +184,10 @@ public class Trader : MonoBehaviour
     }
 
     // Calculate the value of a resource at a hypothetical number of available resources of the type res
-    private float CalculateAvailabilityValue(Resource res, int number)
+    private float CalculateAvailabilityValue(int resourceID, int number)
     {
-        if (availability[res] == 0 || number == 0 || this.availabilityMax == float.MinValue) { return 1f; }
-        else { return 1f / (availability[res] / (this.availabilityMax * number)); }
+        if (availability[resourceID] == 0 || number == 0 || this.availabilityMax == float.MinValue) { return 1f; }
+        else { return 1f / (availability[resourceID] / (this.availabilityMax * number)); }
 
         // x = (... / availabilityMax)
         //float x = (1f / availability[res]) / player.resources[res];
@@ -254,8 +227,8 @@ public class Trader : MonoBehaviour
 
 public class Proposal
 {
-    public Resource resToGive; // The resources that the proposer is willing to give
-    public Resource resToTake; // The resources that the proposer wants to get
+    public int resToGive; // The resources that the proposer is willing to give
+    public int resToTake; // The resources that the proposer wants to get
     public int numToGive = 1; // The amount of resources the proposer is willing to give
     public int numToTake = 1; // The amount of resources the proposer want to get
 
@@ -266,11 +239,11 @@ public class Proposal
     /// <param name="rtt"> The resource the proposal wants to gain from the trade. </param>
     /// <param name="ntg"> The number of resources the proposer is willing to give. </param>
     /// <param name="ntt"> The number of resources the proposer want to get in this trade. </param>
-    public Proposal(Resource rtg, Resource rtt, int ntg, int ntt)
+    public Proposal(int resourceToGive, int resourceToTake, int ntg, int ntt)
     {
-        if (rtg == rtt) { throw new System.Exception("Cannot create proposal with the same resources as give and take!"); }
-        this.resToGive = rtg;
-        this.resToTake = rtt;
+        if (resourceToGive == resourceToTake) { throw new System.Exception("Cannot create proposal with the same resources as give and take!"); }
+        this.resToGive = resourceToGive;
+        this.resToTake = resourceToTake;
         this.numToGive = ntg;
         this.numToTake = ntt;
     }

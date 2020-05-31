@@ -1,9 +1,34 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 public class GridPoint
 {
+    /// <summary>
+    /// The ID of this GridPoint, used for determining neighbours.
+    /// </summary>
+    public int id = 0;
+    /// <summary>
+    /// The index of this gridpoint in the BoardController.singleton.allGridPoints list.
+    /// </summary>
+    public int index = 0;
+    public bool isMiddle = false;
     public Vector2 position = Vector2.zero;
     public Vector2Int colRow = Vector2Int.zero;
+    /// <summary>
+    /// The indexes of our neighbours (NTGP and TGP alike) in the BoardController.singleton.allGridPoints list.
+    /// </summary>
+    public HashSet<int> connectedIndexes = new HashSet<int>();
+
+    /// <summary>
+    /// Connect a GridPoint to one of its neighbours by index.
+    /// </summary>
+    /// <param name="index"> The index of the neighbour in the allGridPoints list. </param>
+    public virtual void Connect(int index)
+    {
+        connectedIndexes.Add(index);
+        BoardController.singleton.connections[this.index, index] = 1;
+    }
+
     /*
 
     public bool isMiddle = false;
@@ -22,7 +47,7 @@ public class GridPoint
         // Either x is odd and (y+1)%3==0 OR x is even and (y-1)%3==0
         isMiddle = (colRow.x % 2 == 1 && (colRow.y + 1) % 3 == 0) || (colRow.x % 2 == 0 && (colRow.y - 1) % 3 == 0);
 
-        foreach (Resource res in Enums.GetResourcesAsList())
+        foreach (Resource res in Utility.GetResourcesAsList())
         {
             resourceValues.Add(res, 0);
         }

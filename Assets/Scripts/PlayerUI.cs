@@ -13,4 +13,6 @@ public class PlayerUI : MonoBehaviour
     public Text grain = null;
     public Text stone = null;
     public Text buildings = null;
+    public Text knights = null;
+    public Text VPC = null;
 }

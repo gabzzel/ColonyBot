@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.MLAgents;
+using static Utility;
 
 public class PlayerManager : MonoBehaviour
 {
@@ -10,7 +11,7 @@ public class PlayerManager : MonoBehaviour
     public List<ColonyPlayer> players = new List<ColonyPlayer>();
     private int max = 4;
     private int currentPlayer = 0;
-    private Queue<int> queue = new Queue<int>();
+    private readonly Queue<int> queue = new Queue<int>();
 
     private void Awake()
     {
@@ -19,22 +20,12 @@ public class PlayerManager : MonoBehaviour
     }
 
     public ColonyPlayer CurrentPlayer { get { return players[currentPlayer]; } }
-    public int CurrentPlayerNumber { get { return currentPlayer; } }
     public int NextPlayerNumber
     {
         get
         {
             int num = currentPlayer + 1;
             if(num >= max) { return 0; }
-            return num;
-        }
-    }
-    public int PreviousPlayerNumber
-    {
-        get
-        {
-            int num = currentPlayer - 1;
-            if(num < 0) { return max - 1; }
             return num;
         }
     }
@@ -116,8 +107,29 @@ public class PlayerManager : MonoBehaviour
 
             for (int i = 0; i < toRemove; i++)
             {
-                player.RemoveResource();
+                int removed = player.RemoveResource();
+                if(removed != Desert) { GameController.singleton.availableResources[removed]++; }
             }
+        }
+    }
+
+    public void CheckLargestArmy()
+    {
+        // Get the player with the largest army
+        ColonyPlayer player = null;
+        foreach(ColonyPlayer p in players)
+        {
+            if (p.LargestArmy) { player = p; }
+        }
+
+        // If there is no such player, the current player has the largest army!
+        if(player == null) { CurrentPlayer.LargestArmy = true; }
+
+        // If there is a player with the largest army that is not the current player and the number of used knights of that player is lower than the one of the current player...
+        else if(player != CurrentPlayer && CurrentPlayer.usedKnights > player.usedKnights)
+        {
+            player.LargestArmy = false;
+            CurrentPlayer.LargestArmy = true;
         }
     }
 }

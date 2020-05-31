@@ -1,10 +1,10 @@
 ﻿using UnityEngine;
-using static Enums;
+using static Utility;
 
 public class Building : MonoBehaviour
 {
     private ColonyPlayer owner = null;
-    [SerializeField] private BuildingType type = BuildingType.Village;
+    [SerializeField] private int type = -1;
     private NonTileGridPoint gridPoint;
 
     public ColonyPlayer Owner
@@ -16,7 +16,7 @@ public class Building : MonoBehaviour
             owner = value;
         }
     }
-    public BuildingType Type { get { return type; } }
+    public int Type { get { return type; } }
     public NonTileGridPoint Position
     {
         get { return gridPoint; }
@@ -29,9 +29,9 @@ public class Building : MonoBehaviour
 
     public override string ToString()
     {
-        if(type != BuildingType.Street)
+        if(type != Street)
         {
-            return type.ToString()[0] + " @ " + Position.colRow.ToString();
+            return type.ToString()[0] + " @ " + Position.position.ToString();
         }
         else
         {
