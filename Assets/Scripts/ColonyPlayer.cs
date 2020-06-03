@@ -199,13 +199,13 @@ public class ColonyPlayer : Agent
             if (buildings.Count >= 4) { RemoveResourcesForBuilding(buildingType); }
 
             // 3. Give the order to build the building at the desired GridPoint
-            if (buildingType == Village) { buildings.Add(GameController.singleton.CreateVillageOrCity(gp, false, this)); }
+            if (buildingType == Village) { buildings.Add(GameController.singleton.CreateVillageOrCity(gp, false, this, buildings.Count < 4)); }
             else if (buildingType == City)
             {
                 availableBuildings[Village] += 1;
-                buildings.Add(GameController.singleton.CreateVillageOrCity(gp, true, this));
+                buildings.Add(GameController.singleton.CreateVillageOrCity(gp, true, this, false));
             }
-            else if (buildingType == Street) { buildings.Add(GameController.singleton.CreateStreet(gp, this)); }
+            else if (buildingType == Street) { buildings.Add(GameController.singleton.CreateStreet(gp, this, buildings.Count < 4 ? LastBuilding.Position : null, buildings.Count < 4)); }
         }
         else if(actionNum == BuyDevelopmentCard)
         {

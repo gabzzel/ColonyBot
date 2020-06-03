@@ -165,7 +165,7 @@ public class NonTileGridPoint : GridPoint
         {
             if (!BoardController.ntgpIndexes.Contains(neighbourIndex)) { continue; }
             NonTileGridPoint neighbour = (NonTileGridPoint)BoardController.singleton.allGridPoints[neighbourIndex];
-            if (neighbour.OccupiedBy(playerID)) { return neighbour; }
+            if (neighbour.OccupiedBy(playerID) && BoardController.singleton.connections[index, neighbourIndex] == 1) { return neighbour; }
         }
         return null;
     }
@@ -181,7 +181,7 @@ public class NonTileGridPoint : GridPoint
                 {
                     if (BoardController.ntgpIndexes.Contains(secondDegreeIndex))
                     {
-                        if (BoardController.singleton.connections[neighbourIndex, secondDegreeIndex] == 2 + playerID) { return neighbour; }
+                        if (BoardController.singleton.connections[neighbourIndex, secondDegreeIndex] == 2 + playerID && BoardController.singleton.connections[neighbourIndex, index] == 1) { return neighbour; }
                     }
                 }
             }          

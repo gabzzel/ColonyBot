@@ -996,6 +996,7 @@ MonoBehaviour:
   robber: {fileID: 830440312}
   gameStarted: 0
   availableResources: 0000000000000000000000000000000000000000
+  developmentCards: 000000000000000000000000
 --- !u!114 &330755335
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4083,7 +4084,7 @@ PrefabInstance:
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
       propertyPath: color.b
-      value: 0.8499565
+      value: 0.07212782
       objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
@@ -6876,6 +6877,7 @@ MonoBehaviour:
   - {fileID: 1399998285}
   diceRollText: {fileID: 1935875021}
   stepText: {fileID: 1341720186}
+  LogContainer: {fileID: 513483672}
 --- !u!1 &1866504457
 GameObject:
   m_ObjectHideFlags: 0
@@ -7315,17 +7317,17 @@ PrefabInstance:
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
       propertyPath: color.r
-      value: 0.05660379
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
       propertyPath: color.g
-      value: 0.056295954
+      value: 0.6443302
       objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
       propertyPath: color.b
-      value: 0.054734796
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
@@ -7920,6 +7922,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_BrainParameters.VectorObservationSize
       value: 386
+      objectReference: {fileID: 0}
+    - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
+        type: 3}
+      propertyPath: color.g
+      value: 0.5104327
       objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209188, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}

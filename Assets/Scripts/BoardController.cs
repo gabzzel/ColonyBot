@@ -451,11 +451,14 @@ public class BoardController : MonoBehaviour
         // If there is already a building on this gridpoint, we cannot build here
         if (gp.Building != null) { return false; }
 
+        if(!free && !gp.HasStreetConnectionForPlayer(player.ID)) { return false; } //
+
         foreach (int neighbourIndex in gp.connectedIndexes)
         {
             if (!ntgpIndexes.Contains(neighbourIndex)) { continue; }
             NonTileGridPoint neighbour = (NonTileGridPoint)allGridPoints[neighbourIndex];
-            if (neighbour.Building != null || !free && !neighbour.HasStreetConnectionForPlayer(player.ID)) { return false; }
+            //if (neighbour.Building != null || !free && !neighbour.HasStreetConnectionForPlayer(player.ID)) { return false; }
+            if (neighbour.Building != null) { return false; }
         }
 
         return true;
@@ -473,7 +476,7 @@ public class BoardController : MonoBehaviour
         // 1. Our start must exist
         // 2. There must not exist a street already between start and end
         // 3. The "end" / "to" cannot be occupied by another player
-        return start != null && connections[start.index, end.index] == 1 && connections[end.index, start.index] == 1 && (end.Building == null || end.OccupiedBy(player));
+        return start != null && connections[start.index, end.index] == 1 && connections[end.index, start.index] == 1; // && (end.Building == null || end.OccupiedBy(player));
     }
 
     public TileGridPoint GetBestTileForRobber(ColonyPlayer player)

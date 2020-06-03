@@ -25,7 +25,7 @@ public class GameController : MonoBehaviour
 
     [SerializeField] private bool gameStarted = false;
     public int[] availableResources = new int[5];
-    private int[] developmentCards = new int[3];
+    [SerializeField] private int[] developmentCards = new int[3];
 
     public bool GameStarted { get { return gameStarted; } }
 
@@ -166,16 +166,16 @@ public class GameController : MonoBehaviour
         for (int i = 0; i < developmentCards.Length; i++)
         {
             total += developmentCards[i];
-            if(total >= random) { total = i; break; }
+            if(total > random) { total = i; break; }
         }
         
         if(total == Knight) { player.availableKnights++; developmentCards[Knight]--; }
         else if(total == VictoryPoint) { player.AddReward(1); player.developmentPoints++; developmentCards[VictoryPoint]--; }
-
+        availableResources[Ore]++; availableResources[Wool]++; availableResources[Grain]++;
         // If we draw an ususable card, we do nothing!
     }
 
-    public Building CreateVillageOrCity(NonTileGridPoint ntgp, bool city, ColonyPlayer cp)
+    public Building CreateVillageOrCity(NonTileGridPoint ntgp, bool city, ColonyPlayer cp, bool initial)
     {
         if (ntgp == null) { throw new System.Exception("Cannot create village on null Gridpoint!"); }
 
@@ -197,7 +197,7 @@ public class GameController : MonoBehaviour
                 throw new System.Exception("Cannot build a village on " + ntgp.ToString() + " because there is already something there!");
             }
             villageObject = Instantiate(villagePrefab, ntgp.position, Quaternion.identity, cp.transform);
-            availableResources[Stone] += 1; availableResources[Wood] += 1; availableResources[Grain] += 1; availableResources[Wool] += 1;
+            if (!initial) { availableResources[Stone] += 1; availableResources[Wood] += 1; availableResources[Grain] += 1; availableResources[Wool] += 1; }
         }
 
         Building building = villageObject.GetComponent<Building>();
@@ -214,11 +214,11 @@ public class GameController : MonoBehaviour
     /// </summary>
     /// <param name="dest"> Where the street will go to. </param>
     /// <param name="cp"> For which player the street will be build </param>
-    public Building CreateStreet(NonTileGridPoint dest, ColonyPlayer cp)
+    public Building CreateStreet(NonTileGridPoint dest, ColonyPlayer cp, NonTileGridPoint start, bool initial)
     {
         if (dest == null) { throw new System.Exception("Cannot create street to null GridPoint!"); }
 
-        NonTileGridPoint start = dest.OccupiedNeighbour(cp.ID);
+        if (start == null) { start = dest.OccupiedNeighbour(cp.ID); }
 
         if (start == null) { start = dest.NeighbourWithConnectionToPlayer(cp.ID); }
 
@@ -237,7 +237,7 @@ public class GameController : MonoBehaviour
         dest.Connect(start.index, b);
         start.Connect(dest.index, b);
         uic.NotifyOfBuilding(cp.ID, "S : " + start.index + " to " + dest.index);
-        availableResources[Wood] += 1; availableResources[Stone] += 1;
+        if (!initial) { availableResources[Wood] += 1; availableResources[Stone] += 1; }
         return b;
     }
 

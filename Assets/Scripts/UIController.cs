@@ -7,12 +7,12 @@ using static Utility;
 
 public class UIController : MonoBehaviour
 {
-
     public static UIController singleton = null;
 
     public List<GameObject> players = new List<GameObject>();
     [SerializeField] private Text diceRollText = null;
     [SerializeField] private Text stepText = null;
+    [SerializeField] private GameObject LogContainer = null;
 
     private void Awake()
     {
@@ -27,6 +27,8 @@ public class UIController : MonoBehaviour
         {
             players[i].SetActive(i < GameController.singleton.numberOfPlayers && GameController.singleton.showUI);
         }
+
+        LogContainer.SetActive(GameController.singleton.showUI);
 
         UpdateAllPlayers(ps);
         UpdateDiceRoll(0);
@@ -55,9 +57,8 @@ public class UIController : MonoBehaviour
         Image background = player.transform.GetChild(0).GetComponent<Image>();
         PlayerUI pui = player.GetComponent<PlayerUI>();
 
-        background.color = p.color;
-        background.SetAllDirty();
         pui.name.text = p.name;
+        pui.name.color = p.color;
         pui.points.text = "P: " + p.Points;
         pui.wood.text = "Wd: " + p.resources[Wood];
         pui.ore.text = "Or: " + p.resources[Ore];
