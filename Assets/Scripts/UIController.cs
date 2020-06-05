@@ -60,12 +60,12 @@ public class UIController : MonoBehaviour
         pui.name.text = p.name;
         pui.name.color = p.color;
         pui.points.text = "P: " + p.Points;
-        pui.wood.text = "Wd: " + p.resources[Wood];
-        pui.ore.text = "Or: " + p.resources[Ore];
-        pui.wool.text = "Wl: " + p.resources[Wool];
-        pui.grain.text = "Gr: " + p.resources[Grain];
-        pui.stone.text = "St: " + p.resources[Stone];
-        pui.knights.text = "Kn.: " + p.availableKnights + " / " + p.usedKnights;
+        pui.wood.text = "L: " + p.resources[Lumber];
+        pui.ore.text = "O: " + p.resources[Ore];
+        pui.wool.text = "W: " + p.resources[Wool];
+        pui.grain.text = "G: " + p.resources[Grain];
+        pui.stone.text = "B: " + p.resources[Brick];
+        pui.knights.text = "K: " + p.availableKnights + " / " + p.usedKnights;
         pui.knights.color = p.LargestArmy ? Color.green : Color.black;
         pui.VPC.text = "VPC: " + p.developmentPoints;
     }

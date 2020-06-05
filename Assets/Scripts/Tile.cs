@@ -57,12 +57,12 @@ public class Tile : MonoBehaviour
     public List<Tile> GetNeighbouringTiles()
     { 
         List<Tile> result = new List<Tile>();
-        foreach(int neighbourIndex in gridPoint.connectedIndexes)
+        foreach(int neighbourIndex in gridPoint.connectedNTGPs)
         {
             GridPoint gp = BoardController.singleton.allGridPoints[neighbourIndex];
-            foreach(int secondDegreeIndex in gp.connectedIndexes)
+            foreach(int secondDegreeIndex in gp.connectedTGPs)
             {
-                if (neighbourIndex != gridPoint.index && BoardController.tgpIndexes.Contains(secondDegreeIndex))
+                if (neighbourIndex != gridPoint.index)
                 {
                     result.Add(((TileGridPoint)BoardController.singleton.allGridPoints[secondDegreeIndex]).Tile);
                 }

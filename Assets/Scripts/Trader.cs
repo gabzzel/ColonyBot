@@ -7,31 +7,28 @@ public class Trader : MonoBehaviour
 {
     public bool dirty = false;
     public bool isBank = false;
-    List<Trader> otherTraders = new List<Trader>();
+    private Trader bank = null;
 
-    private float[] resourceValues = new float[5];
-    private float[] availability = new float[5];
+    [SerializeField] private float[] resourceValues = new float[5];
+    [SerializeField] private float[] availability = new float[5];
     float availabilityMax = 1f;
-    private float[] usefulness = new float[5];
+    [SerializeField] private float[] usefulness = new float[5];
     float useFulnessMax = 1f;
 
     float mean = 0.5f;
     ColonyPlayer player = null;
 
     private void Awake()
-    {
-        foreach (Trader trader in FindObjectsOfType<Trader>())
-        {
-            if (trader != this)
-            {
-                otherTraders.Add(trader);
-            }
-        }
+    {    
         if (!isBank)
         {
             player = GetComponent<ColonyPlayer>();
         }
+    }
 
+    private void Start()
+    {
+        bank = GameController.singleton.gameObject.GetComponent<Trader>();
     }
 
     public void Initialize()
@@ -47,7 +44,9 @@ public class Trader : MonoBehaviour
     public void UpdateResourceValues()
     {
         mean = 0.5f;
-        /* Availability */
+
+        #region Availability
+
         availability = new float[5];
         foreach (Building building in player.Buildings)
         {
@@ -59,38 +58,33 @@ public class Trader : MonoBehaviour
                 availability[resourceID] += ntgp.ResourceValue(resourceID) * building.Type;
             }
         }
-        availabilityMax = float.MinValue;
-        // Determine max value for normalisation
 
+        availabilityMax = Max(availability);
         for (int i = 0; i < availability.Length; i++)
         {
-            if (availability[i] > availabilityMax) { availabilityMax = availability[i]; }
-
-            // Normalize the availability and multiply by our current resources in hand. 
-            // We divide 1 by the availability because the value of the resource is the opposite of the avaibility.
-            // (> available) means (< value)
-
-            for (int resourceID = 0; resourceID < player.resources.Length; resourceID++)
-            {
-                availability[resourceID] = CalculateAvailabilityValue(resourceID, player.resources[resourceID]);
-            }
-
+            availability[i] = availabilityMax == 0f ? 1f : availability[i] / availabilityMax;
         }
-        /* Usefulness */
+
+        #endregion
+
+        #region Usefulness
+
         usefulness = new float[5];
-        usefulness[Wood] += player.buildingOptions[Village] + player.buildingOptions[Street];
-        usefulness[Stone] += player.buildingOptions[Village] + player.buildingOptions[Street];
-        usefulness[Wool] += player.buildingOptions[Village];
-        usefulness[Grain] += player.buildingOptions[Village] + 2 * player.buildingOptions[City];
-        usefulness[Ore] += 3 * player.buildingOptions[City];
+        usefulness[Lumber] += player.availableBuildings[Village] + player.availableBuildings[Street];
+        usefulness[Brick] += player.availableBuildings[Village] + player.availableBuildings[Street];
+        usefulness[Wool] += player.availableBuildings[Village];
+        usefulness[Grain] += player.availableBuildings[Village] + 2 * player.availableBuildings[City];
+        usefulness[Ore] += 3 * player.availableBuildings[City];
 
         useFulnessMax = Max(usefulness);
 
         for (int i = 0; i < usefulness.Length; i++)
         {
-            usefulness[i] /= useFulnessMax;
-            resourceValues[i] = usefulness[i] * availability[i];
+            usefulness[i] = useFulnessMax == 0f ? 1f : usefulness[i] / useFulnessMax;
+            resourceValues[i] = CalculateValue(i, player.resources[i]);
         }
+
+        #endregion
 
         dirty = false;
     }
@@ -98,6 +92,13 @@ public class Trader : MonoBehaviour
 
     public void StartTrading()
     {
+        List<Trader> traders = new List<Trader>();
+        foreach(ColonyPlayer player in PlayerManager.singleton.GetPlayersInOrder())
+        {
+            traders.Add(player.trader);
+        }
+        traders.Add(bank);
+
         // Get all possible proposals based on our resources
         //List<Proposal> props = GetAllPossibleProposals(true);
         UpdateResourceValues();
@@ -109,9 +110,9 @@ public class Trader : MonoBehaviour
             if (dirty) { UpdateResourceValues(); } // Update our resource values before trading
             Proposal prop = props.Values[props.Count - 1]; // Get the best proposal for us
             props.RemoveAt(props.Count - 1); // Remove it from the list
-
+            
             // Propose it to all other traders
-            foreach (Trader t in otherTraders)
+            foreach (Trader t in traders)
             {
                 // If they accept..
                 if (t.Accept(prop))
@@ -133,7 +134,18 @@ public class Trader : MonoBehaviour
         // Take is TAKEN FROM US and give = GIVEN TO US
 
         // If we are the bank, we only accept trades that are 4 to 1. 
-        if (isBank && proposal.numToGive == 4 && proposal.numToTake == 1) { return true; }
+        if (isBank) 
+        {
+            HashSet<int> harbors = PlayerManager.singleton.CurrentPlayer.harbors;
+
+            // If the current player is on a harbor that allows him/her to trade 2:1, only accept those
+            if(harbors.Contains(proposal.resToGive) && proposal.numToGive == 2 && proposal.numToTake == 1) { return true; }
+            // Else if the current player is on a randomharbor, only allow 3:1 trades
+            else if(harbors.Contains(RandomHarbor) && proposal.numToGive == 3 && proposal.numToTake == 1) { return true; }
+            // Otherwise, only accept 4:1 ratio trades
+            else if(proposal.numToGive == 4 && proposal.numToTake == 1) { return true; }
+            else { return false; }
+        }
         else if (isBank) { return false; }
 
         // Accept everything for now, if we can afford it
@@ -184,15 +196,10 @@ public class Trader : MonoBehaviour
     }
 
     // Calculate the value of a resource at a hypothetical number of available resources of the type res
-    private float CalculateAvailabilityValue(int resourceID, int number)
+    private float CalculateValue(int resourceID, int number)
     {
-        if (availability[resourceID] == 0 || number == 0 || this.availabilityMax == float.MinValue) { return 1f; }
-        else { return 1f / (availability[resourceID] / (this.availabilityMax * number)); }
-
-        // x = (... / availabilityMax)
-        //float x = (1f / availability[res]) / player.resources[res];
-        //float _new = x * number; // The availability value if we would have 'number' amount of resources of this type
-        //return _new;
+        if(number == 0f) { return 1f; }
+        return (usefulness[resourceID] + availability[resourceID]) / (2f * number);
     }
 
     private float WeighOwnProposal(Proposal proposal)
@@ -205,8 +212,8 @@ public class Trader : MonoBehaviour
         // Give is GIVEN TO US, take is TAKEN FROM US!
 
         // Our hypothetical value of the given and taken resources if the proposal would go through
-        float newGive = CalculateAvailabilityValue(proposal.resToGive, player.resources[proposal.resToGive] + proposal.numToGive) * usefulness[proposal.resToGive];
-        float newTake = CalculateAvailabilityValue(proposal.resToTake, Math.Max(player.resources[proposal.resToTake] - proposal.numToTake, 0)) * usefulness[proposal.resToTake];
+        float newGive = CalculateValue(proposal.resToGive, player.resources[proposal.resToGive] + proposal.numToGive);
+        float newTake = CalculateValue(proposal.resToTake, Math.Max(player.resources[proposal.resToTake] - proposal.numToTake, 0));
 
         // The differences with the mean of the current and hypothetical 'new' values
         float oldGiveDiff = Mathf.Abs(mean - resourceValues[proposal.resToGive]);

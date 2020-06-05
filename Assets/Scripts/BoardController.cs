@@ -1,6 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using static Utility;
+using Random = UnityEngine.Random;
 
 public class BoardController : MonoBehaviour
 {
@@ -12,6 +17,7 @@ public class BoardController : MonoBehaviour
 
     [SerializeField] private GameObject tilePrefab = null;
     [SerializeField] private GameObject gridPointIndicator = null;
+    [SerializeField] private GameObject harborIndicator = null;
     [SerializeField] private GameObject board = null;
     public List<GridPoint> allGridPoints = new List<GridPoint>();
     public List<NonTileGridPoint> nonTileGridPoints = new List<NonTileGridPoint>();
@@ -26,19 +32,20 @@ public class BoardController : MonoBehaviour
     /// The indexes of all NonTileGridPoints in the set of all gridpoints
     /// </summary>
     public static List<int> ntgpIndexes = new List<int> { 0, 1, 2, 3, 5, 6, 7, 8, 10, 11, 13, 14, 15, 17, 18, 20, 21, 23, 24, 25, 27, 28, 30, 31, 32, 34, 35, 37, 38, 40, 41, 42, 44, 45, 47, 48, 49, 51, 52, 54, 55, 57, 58, 59, 61, 62, 64, 65, 66, 67, 69, 70, 71, 72 };
+    public static List<int> coastalNTGPs = new List<int>() { 0, 1, 5, 6, 13, 14, 23, 31, 40, 48, 57, 65, 64, 70, 69, 72, 71, 67, 66, 59, 58, 49, 41, 32, 24, 15, 7, 8, 2, 3 };
 
     public Tile[] bestRobberTiles = new Tile[4];
-
-    // The total value of every resource on the board. Calculated in DistributeNumbers()
-    private float[] totalValues = new float[6];
     private TileGridPoint robberLocation = null;
 
     [SerializeField] private List<Tile> tiles = new List<Tile>();
 
+    [Header("Generate Options")]
     public bool useStandard = false;
     public bool allowHighChanceNeighbours = false;
     public bool drawGridPointIndicators = true;
-    readonly int[] standardResources = new int[] { Wool, Wood, Stone, Grain, Stone, Grain, Ore, Wood, Grain, Desert, Wood, Stone, Wool, Ore, Ore, Grain, Wood, Wool, Wool };
+    public bool drawHarbors = true;
+    public bool fixDesertToMiddle = false;
+    readonly int[] standardResources = new int[] { Wool, Lumber, Brick, Grain, Brick, Grain, Ore, Lumber, Grain, Desert, Lumber, Brick, Wool, Ore, Ore, Grain, Lumber, Wool, Wool };
     readonly List<int> standardNumbers = new List<int> { 9, 3, 2, 3, 8, 4, 5, 5, 6, 0, 6, 10, 12, 11, 8, 9, 11, 4, 10 };
 
     /* Properties */
@@ -67,6 +74,13 @@ public class BoardController : MonoBehaviour
         DetermineConnections();
         DistributeResources();
         DistributeNumbers();
+        DistributeHarbors();
+        foreach (int i in ntgpIndexes)
+        {
+            NonTileGridPoint ntgp = (NonTileGridPoint)allGridPoints[i];
+            ntgp.UpdateValue();
+        }
+
     }
 
     void DistributeResources()
@@ -82,20 +96,19 @@ public class BoardController : MonoBehaviour
         else
         {
             List<int> indexes = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18 };
-            tiles[9].SetResource(Desert);
+            if (fixDesertToMiddle) { tiles[9].SetResource(Desert); }
+            else { indexes.Add(9); }
 
             // Go trough all tiles
             for (int i = 0; i < tiles.Count; i++)
             {
-                if (i != 9)
-                {
-                    int r = Random.Range(0, indexes.Count); // Get a random index
-                    int index = indexes[r]; // Get the index of the resources
-                    int resourceID = standardResources[index]; // The random resource
-                    tiles[i].SetResource(resourceID);
-                    indexes.RemoveAt(r);
-                }
+                int r = Random.Range(0, indexes.Count); // Get a random index
+                int index = indexes[r]; // Get the index of the resources
+                int resourceID = standardResources[index]; // The random resource
+                tiles[i].SetResource(resourceID);
+                indexes.RemoveAt(r);
             }
+
         }
     }
 
@@ -110,8 +123,62 @@ public class BoardController : MonoBehaviour
         }
         else
         {
-            List<int> indexes = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18 };
-            tiles[9].SetNumber(0);
+            List<int> indexes = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 };
+            List<int> standardNumbersCopy = standardNumbers.ToArray().ToList();
+            HashSet<Vector2Int> highChanceColrows = new HashSet<Vector2Int>();
+
+            int tries = 0;
+            while(standardNumbersCopy.Count > 0 && tries < 1000)
+            {
+                tries++;
+
+                int randomIndex = Random.Range(0, indexes.Count);
+                TileGridPoint t = (TileGridPoint)allGridPoints[tgpIndexes[indexes[randomIndex]]];
+                
+                // If we are checking the desert tile, we want to set the number to zero and just continue.
+                if(t.colRow == new Vector2Int(5, 5))
+                {
+                    t.Tile.SetNumber(0);
+                    indexes.RemoveAt(randomIndex);
+                    standardNumbersCopy.Remove(0);
+                    continue;                 
+                }
+
+                int randomNumberIndex = Random.Range(0, standardNumbersCopy.Count);
+                int randomNumber = standardNumbersCopy[randomNumberIndex];
+
+                // If we are not checking a 6 or 8, just continue as normal
+                if (randomNumber != 6 && randomNumber != 8)
+                {
+                    t.Tile.SetNumber(randomNumber);
+                    indexes.RemoveAt(randomIndex);
+                    standardNumbersCopy.RemoveAt(randomNumberIndex);
+                }
+                else
+                {
+                    bool found = false;
+                    if (!allowHighChanceNeighbours)
+                    {
+                        foreach (Vector2Int other in highChanceColrows)
+                        {
+                            if (Math.Abs(other.x - t.colRow.x) <= 2 || Math.Abs(other.y - t.colRow.y) <= 2)
+                            {
+                                found = true;
+                            }
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        t.Tile.SetNumber(randomNumber);
+                        indexes.RemoveAt(randomIndex);
+                        standardNumbersCopy.RemoveAt(randomNumberIndex);
+                    }
+                }               
+            }
+
+
+            /*
 
             // Go trough all tiles
             for (int i = 0; i < tiles.Count; i++)
@@ -129,8 +196,10 @@ public class BoardController : MonoBehaviour
             // Make sure we have good board
             if (!allowHighChanceNeighbours)
             {
+                int tries = 0;
                 while (CheckHighChanceNeighbours())
                 {
+                    tries++;
                     indexes = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18 };
                     //Debug.Log("Generating new board, while the old one wasn't fair!");
                     // Go trough all tiles
@@ -146,15 +215,58 @@ public class BoardController : MonoBehaviour
                             indexes.RemoveAt(r);
                         }
                     }
+                    if(tries > 1000) { throw new Exception("We couldn't create a board, even after 1000 tries!"); }
                 }
             }
+            */
         }
+    }
 
-        totalValues = new float[6]; // Reset the total values
-        // Update the total values for every tile.
-        foreach (Tile t in tiles)
+    void DistributeHarbors()
+    {
+        List<int> harbors = new List<int>() { Lumber, Brick, Grain, Ore, Wool, RandomHarbor, RandomHarbor, RandomHarbor, RandomHarbor };
+        int startCoastalIndex = Random.Range(0, coastalNTGPs.Count); // A random index of the coastalNTGPs list
+        int prev = NoHarbor;
+        int prevprev = NoHarbor;
+        bool skip = false;
+
+        for (int i = 2; i < coastalNTGPs.Count; i++)
         {
-            if (t.Resource != Desert) { totalValues[t.Resource] += t.Value; }
+            int currentCoastalIndex = startCoastalIndex + i;
+            if (currentCoastalIndex >= coastalNTGPs.Count) { currentCoastalIndex -= coastalNTGPs.Count; }
+            int currentGI = coastalNTGPs[currentCoastalIndex];
+            NonTileGridPoint ntgp = (NonTileGridPoint)allGridPoints[currentGI];
+
+            if (prev == NoHarbor && prevprev != NoHarbor || i == 2)
+            {
+                // Choose a random harbor type
+                int randomHarborIndex = Random.Range(0, harbors.Count);
+                int harbor = harbors[randomHarborIndex];
+                ntgp.harbor = harbor;
+                harbors.RemoveAt(randomHarborIndex);
+                if (drawHarbors)
+                {
+                    GameObject h = Instantiate(harborIndicator, allGridPoints[currentGI].position, Quaternion.identity);
+                    h.transform.GetChild(0).GetChild(0).GetComponent<Text>().text = HarborNames[harbor];
+                }
+            }
+            else if (prevprev == NoHarbor && prev != NoHarbor)
+            {
+                ntgp.harbor = prev;
+                if (drawHarbors)
+                {
+                    GameObject h = Instantiate(harborIndicator, allGridPoints[currentGI].position, Quaternion.identity);
+                    h.transform.GetChild(0).GetChild(0).GetComponent<Text>().text = HarborNames[ntgp.harbor];
+                }
+                if (!skip)
+                {
+                    i++;
+                    skip = true;
+                }
+            }
+
+            prevprev = prev;
+            prev = ntgp.harbor;
         }
     }
 
@@ -272,7 +384,7 @@ public class BoardController : MonoBehaviour
         {
             GameObject g = Instantiate(gridPointIndicator, globalPos, Quaternion.identity);
             g.name = "GridPoint " + (allGridPoints.Count - 1);
-            g.transform.GetChild(0).GetChild(0).GetComponent<UnityEngine.UI.Text>().text = (allGridPoints.Count - 1).ToString();
+            g.transform.GetChild(0).GetChild(0).GetComponent<Text>().text = allGridPoints[allGridPoints.Count - 1].colRow.ToString();
         }
     }
 
@@ -378,10 +490,8 @@ public class BoardController : MonoBehaviour
 
                 if ((to.id == from.id + 1 && to.colRow.x == from.colRow.x) || (to.id == from.id + extra + 8 || to.id == from.id + extra + 9) && to.colRow.x == from.colRow.x + 1)
                 {
-                    if (!from.isMiddle) { ((NonTileGridPoint)from).Connect(j); }
-                    else { from.Connect(j); }
-                    if (!to.isMiddle) { ((NonTileGridPoint)to).Connect(i); }
-                    else { to.Connect(i); }
+                    from.Connect(j, to.isMiddle);
+                    to.Connect(i, from.isMiddle);
                 }
             }
         }
@@ -424,8 +534,8 @@ public class BoardController : MonoBehaviour
     /// <returns> Whether this GridPoint is eligible. </returns>
     public bool PossibleBuildingSite(NonTileGridPoint gp, ColonyPlayer player, int buildingType, bool free = false)
     {
-        if(buildingType == Street) { return PossibleStreetBuildingSite(gp, player); }
-        else if(buildingType == Village) { return PossibleVillageBuildingSite(gp, player, free); }
+        if (buildingType == Street) { return PossibleStreetBuildingSite(gp, player); }
+        else if (buildingType == Village) { return PossibleVillageBuildingSite(gp, player, free); }
         else { return PossibleCityBuildingSite(gp, player); }
     }
 
@@ -451,11 +561,10 @@ public class BoardController : MonoBehaviour
         // If there is already a building on this gridpoint, we cannot build here
         if (gp.Building != null) { return false; }
 
-        if(!free && !gp.HasStreetConnectionForPlayer(player.ID)) { return false; } //
+        if (!free && !gp.HasStreetConnectionForPlayer(player.ID)) { return false; } //
 
-        foreach (int neighbourIndex in gp.connectedIndexes)
+        foreach (int neighbourIndex in gp.connectedNTGPs)
         {
-            if (!ntgpIndexes.Contains(neighbourIndex)) { continue; }
             NonTileGridPoint neighbour = (NonTileGridPoint)allGridPoints[neighbourIndex];
             //if (neighbour.Building != null || !free && !neighbour.HasStreetConnectionForPlayer(player.ID)) { return false; }
             if (neighbour.Building != null) { return false; }
@@ -490,9 +599,8 @@ public class BoardController : MonoBehaviour
             if (tgp == RobberLocation) { continue; }
 
             float value = 0f;
-            foreach (int ntgpIndex in tgp.connectedIndexes)
+            foreach (int ntgpIndex in tgp.connectedNTGPs)
             {
-                if (!ntgpIndexes.Contains(ntgpIndex)) { continue; }
                 NonTileGridPoint ntgp = (NonTileGridPoint)allGridPoints[ntgpIndex];
                 // If there is no building here, just skip this one.
                 if (ntgp.Building == null) { continue; }
@@ -517,9 +625,8 @@ public class BoardController : MonoBehaviour
     {
         List<ColonyPlayer> players = new List<ColonyPlayer>();
 
-        foreach (int neighbourIndex in tgp.connectedIndexes)
+        foreach (int neighbourIndex in tgp.connectedNTGPs)
         {
-            if (!ntgpIndexes.Contains(neighbourIndex)) { continue; }
             NonTileGridPoint ntgp = (NonTileGridPoint)allGridPoints[neighbourIndex];
             if (ntgp.Building != null && !ntgp.OccupiedBy(player))
             {

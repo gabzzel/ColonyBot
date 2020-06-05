@@ -17,15 +17,18 @@ public class GridPoint
     /// <summary>
     /// The indexes of our neighbours (NTGP and TGP alike) in the BoardController.singleton.allGridPoints list.
     /// </summary>
-    public HashSet<int> connectedIndexes = new HashSet<int>();
+    //public HashSet<int> connectedIndexes = new HashSet<int>();
+    public HashSet<int> connectedNTGPs = new HashSet<int>();
+    public HashSet<int> connectedTGPs = new HashSet<int>();
 
     /// <summary>
     /// Connect a GridPoint to one of its neighbours by index.
     /// </summary>
     /// <param name="index"> The index of the neighbour in the allGridPoints list. </param>
-    public virtual void Connect(int index)
+    public void Connect(int index, bool tgp)
     {
-        connectedIndexes.Add(index);
+        if (tgp) { connectedTGPs.Add(index); }
+        else { connectedNTGPs.Add(index); }
         BoardController.singleton.connections[this.index, index] = 1;
     }
 

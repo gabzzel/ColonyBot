@@ -4,10 +4,8 @@ using static Utility;
 public class NonTileGridPoint : GridPoint
 {
     private readonly float[] resourceValues = new float[5];
-    //private Dictionary<NonTileGridPoint, Building> connections = new Dictionary<NonTileGridPoint, Building>();
-    //private List<TileGridPoint> connectedTileGridPoints = new List<TileGridPoint>();
-
     private Building building = null;
+    public int harbor = NoHarbor;
 
     public NonTileGridPoint(Vector2 position, Vector2Int colRow)
     {
@@ -17,23 +15,25 @@ public class NonTileGridPoint : GridPoint
     }
 
     public float Value { get; private set; } = 0f;
+    /// <summary>
+    /// The building currently occupying this NTGP.
+    /// </summary>
     public Building Building
     {
         get { return building; }
         set
         {
-            if(value == null) { throw new System.Exception("Cannot build 'null' on a GridPoint."); }
-            else if(value.Type == Village && building != null) { throw new System.Exception("Cannot build two villages on one GridPoint."); }
-            else if(value.Type == Street) { throw new System.Exception("Cannot build a street ON a GridPoint!"); }
-            else if(value.Type == City && value.Owner != building.Owner) { throw new System.Exception("Cannot build city on someone else's village!"); }
-            else {
+            if (value == null) { throw new System.Exception("Cannot build 'null' on a GridPoint."); }
+            else if (value.Type == Village && building != null) { throw new System.Exception("Cannot build two villages on one GridPoint."); }
+            else if (value.Type == Street) { throw new System.Exception("Cannot build a street ON a GridPoint!"); }
+            else if (value.Type == City && value.Owner != building.Owner) { throw new System.Exception("Cannot build city on someone else's village!"); }
+            else
+            {
                 if (building != null) { GameObject.Destroy(building.gameObject); }
                 building = value;
             }
         }
     }
-    //public List<TileGridPoint> ConnectedTGPs { get { return connectedTileGridPoints; } }
-    //public Dictionary<NonTileGridPoint, Building> ConnectedNTGPs { get { return connections; } }
 
     /// <summary>
     /// Get the value of this NonTileGridPoint of a certain resource
@@ -42,13 +42,9 @@ public class NonTileGridPoint : GridPoint
     /// <returns> The value of the resource </returns>
     public float ResourceValue(int resourceID) { return resourceValues[resourceID]; }
 
-    /// <summary>
-    /// Connect this NTGP to a TGP. Also updates the values of this NTGP accordingly.
-    /// </summary>
-    /// <param name="tgp"> To which TileGridPoint to connect. </param>
-    public override void Connect(int index)
+    public void UpdateValue()
     {
-        if (BoardController.tgpIndexes.Contains(index))
+        foreach (int index in connectedTGPs)
         {
             TileGridPoint tgp = (TileGridPoint)BoardController.singleton.allGridPoints[index];
             if (tgp.Resource != Desert)
@@ -56,19 +52,19 @@ public class NonTileGridPoint : GridPoint
                 resourceValues[tgp.Resource] += tgp.Value;
                 Value += tgp.Value / 3f;
             }
+
         }
-        base.Connect(index); 
     }
 
     public void Connect(int neighbourIndex, Building street)
     {
-        if(!BoardController.ntgpIndexes.Contains(neighbourIndex)) { throw new System.Exception("Cannot connect " + ToString() + " to NTGP that does not exist!"); }
-        else if(street == null) { throw new System.Exception("Cannot connect " + ToString() + " to " + BoardController.singleton.allGridPoints[neighbourIndex].ToString() + " with null street!"); }
+        if (!BoardController.ntgpIndexes.Contains(neighbourIndex)) { throw new System.Exception("Cannot connect " + ToString() + " to NTGP that does not exist!"); }
+        else if (street == null) { throw new System.Exception("Cannot connect " + ToString() + " to " + BoardController.singleton.allGridPoints[neighbourIndex].ToString() + " with null street!"); }
         else if (BoardController.singleton.connections[index, neighbourIndex] == 0) { throw new System.Exception("Cannot connect " + ToString() + " with " + BoardController.singleton.allGridPoints[neighbourIndex].ToString() + " because they are not connected!"); }
-        else if(BoardController.singleton.connections[index, neighbourIndex] != 1) 
-        { 
-            throw new System.Exception("Cannot connect " + ToString() + " with " + BoardController.singleton.allGridPoints[neighbourIndex].ToString() + 
-                " for " + street.Owner.name + " because there already is a street between them from " + PlayerManager.singleton.players[BoardController.singleton.connections[index, neighbourIndex] - 2].name + "!"); 
+        else if (BoardController.singleton.connections[index, neighbourIndex] != 1)
+        {
+            throw new System.Exception("Cannot connect " + ToString() + " with " + BoardController.singleton.allGridPoints[neighbourIndex].ToString() +
+                " for " + street.Owner.name + " because there already is a street between them from " + PlayerManager.singleton.players[BoardController.singleton.connections[index, neighbourIndex] - 2].name + "!");
         }
         BoardController.singleton.connections[index, neighbourIndex] = 2 + street.Owner.ID; // Correction for the fact that 0 = not connected, 1 = connected and everything above is player street connections
     }
@@ -86,7 +82,7 @@ public class NonTileGridPoint : GridPoint
 
     public bool OccupiedBy(int playerID)
     {
-        if(Building == null) { return false; }
+        if (Building == null) { return false; }
         return Building.Owner.ID == playerID;
     }
 
@@ -98,9 +94,9 @@ public class NonTileGridPoint : GridPoint
     public bool HasStreetConnectionForPlayer(int playerID)
     {
         int corrected = 2 + playerID;
-        foreach(int neighbourIndex in connectedIndexes)
+        foreach (int neighbourIndex in connectedNTGPs)
         {
-            if(BoardController.singleton.connections[index, neighbourIndex] == corrected) { return true; }
+            if (BoardController.singleton.connections[index, neighbourIndex] == corrected) { return true; }
         }
         return false;
     }
@@ -112,24 +108,23 @@ public class NonTileGridPoint : GridPoint
     /// <returns> An NTGP that we can use to connect to the players' village or street </returns>
     public NonTileGridPoint FindConnectionWithPlayer(ColonyPlayer player)
     {
-        if(player == null) { throw new System.ArgumentNullException("Player", "Cannot check connection to null player."); }
+        if (player == null) { throw new System.ArgumentNullException("Player", "Cannot check connection to null player."); }
 
-        foreach(int neighbourIndex in connectedIndexes)
+        foreach (int neighbourIndex in connectedNTGPs)
         {
-            if (!BoardController.ntgpIndexes.Contains(neighbourIndex)) { continue; }
             NonTileGridPoint neighbour = (NonTileGridPoint)BoardController.singleton.allGridPoints[neighbourIndex];
 
             // If our neighbour is occupied by our player and we are not yet connected with a street, we are golden.
-            if (neighbour.OccupiedBy(player) && BoardController.singleton.connections[index, neighbour.index] == 1) 
-            { 
-                return neighbour; 
+            if (neighbour.OccupiedBy(player) && BoardController.singleton.connections[index, neighbour.index] == 1)
+            {
+                return neighbour;
             }
 
             // If not, we should go over every street connection and find one with our player
-            foreach(int secondLevelNeighbourIndex in neighbour.connectedIndexes)
+            foreach (int secondLevelNeighbourIndex in neighbour.connectedNTGPs)
             {
-                if(secondLevelNeighbourIndex == index) { continue; }
-                if(BoardController.singleton.connections[neighbourIndex, secondLevelNeighbourIndex] == 2 + player.ID && BoardController.singleton.connections[index, neighbour.index] == 1) { return neighbour; }
+                if (secondLevelNeighbourIndex == index) { continue; }
+                if (BoardController.singleton.connections[neighbourIndex, secondLevelNeighbourIndex] == 2 + player.ID && BoardController.singleton.connections[index, neighbour.index] == 1) { return neighbour; }
             }
         }
 
@@ -142,13 +137,12 @@ public class NonTileGridPoint : GridPoint
     /// <returns> True if we have a occupied neighbour, False otherwise. </returns>
     public bool NeighbourOccupied()
     {
-        foreach(int neighbourIndex in connectedIndexes)
+        foreach (int neighbourIndex in connectedNTGPs)
         {
-            if (BoardController.ntgpIndexes.Contains(neighbourIndex))
-            {
-                NonTileGridPoint neighbour = (NonTileGridPoint)BoardController.singleton.allGridPoints[neighbourIndex];
-                if(neighbour.Building != null) { return true; }
-            }
+
+            NonTileGridPoint neighbour = (NonTileGridPoint)BoardController.singleton.allGridPoints[neighbourIndex];
+            if (neighbour.Building != null) { return true; }
+
         }
 
         return false;
@@ -161,9 +155,8 @@ public class NonTileGridPoint : GridPoint
     /// <returns> A NTGP that we can connect our street to as starting point. </returns>
     public NonTileGridPoint OccupiedNeighbour(int playerID)
     {
-        foreach(int neighbourIndex in connectedIndexes)
+        foreach (int neighbourIndex in connectedNTGPs)
         {
-            if (!BoardController.ntgpIndexes.Contains(neighbourIndex)) { continue; }
             NonTileGridPoint neighbour = (NonTileGridPoint)BoardController.singleton.allGridPoints[neighbourIndex];
             if (neighbour.OccupiedBy(playerID) && BoardController.singleton.connections[index, neighbourIndex] == 1) { return neighbour; }
         }
@@ -172,19 +165,16 @@ public class NonTileGridPoint : GridPoint
 
     public NonTileGridPoint NeighbourWithConnectionToPlayer(int playerID)
     {
-        foreach(int neighbourIndex in connectedIndexes)
+        foreach (int neighbourIndex in connectedNTGPs)
         {
-            if (BoardController.ntgpIndexes.Contains(neighbourIndex))
+            NonTileGridPoint neighbour = (NonTileGridPoint)BoardController.singleton.allGridPoints[neighbourIndex];
+            foreach (int secondDegreeIndex in neighbour.connectedNTGPs)
             {
-                NonTileGridPoint neighbour = (NonTileGridPoint)BoardController.singleton.allGridPoints[neighbourIndex];
-                foreach(int secondDegreeIndex in neighbour.connectedIndexes)
-                {
-                    if (BoardController.ntgpIndexes.Contains(secondDegreeIndex))
-                    {
-                        if (BoardController.singleton.connections[neighbourIndex, secondDegreeIndex] == 2 + playerID && BoardController.singleton.connections[neighbourIndex, index] == 1) { return neighbour; }
-                    }
-                }
-            }          
+                if (BoardController.singleton.connections[neighbourIndex, secondDegreeIndex] == 2 + playerID &&
+                    BoardController.singleton.connections[neighbourIndex, index] == 1 &&
+                    secondDegreeIndex != index) { return neighbour; }
+
+            }
         }
         return null;
     }

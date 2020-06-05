@@ -10,14 +10,14 @@ public static class Utility
     public static string[] BuildingNames = new string[] { "Street", "Village", "City" };
 
     /* Resource Types */
-    public const int Wood = 0;
-    public const int Stone = 1;
+    public const int Lumber = 0;
+    public const int Brick = 1;
     public const int Wool = 2;
     public const int Grain = 3;
     public const int Ore = 4;
     public const int Desert = 5;
 
-    public static string[] ResourceNames = new string[] { "Wood", "Stone", "Wool", "Grain", "Ore", "Desert"};
+    public static string[] ResourceNames = new string[] { "Lumber", "Brick", "Wool", "Grain", "Ore", "Desert"};
 
     /* Development Card Types */
     public const int Knight = 0;
@@ -29,6 +29,12 @@ public static class Utility
     // 1 - 163 are reserved for building!
     public const int BuyDevelopmentCard = 163;
     public const int PlayKnightCard = 164;
+
+    /* Harbor types */
+    public const int RandomHarbor = 5;
+    public const int NoHarbor = 6;
+
+    public static string[] HarborNames = new string[] { "Lu", "Br", "Wo", "Gr", "Or", "??", "-" };
 
     public enum TurnPhase
     {
@@ -71,5 +77,19 @@ public static class Utility
         float min = float.MaxValue;
         foreach (float value in array) { if (value < min) { min = value; } }
         return min;
+    }
+
+    public static float Sum(float[] array)
+    {
+        float sum = 0;
+        foreach(float f in array) { sum += f; }
+        return sum;
+    }
+
+    public static int Sum(int[] array)
+    {
+        int sum = 0;
+        foreach(int i in array) { sum += i; }
+        return sum;
     }
 }

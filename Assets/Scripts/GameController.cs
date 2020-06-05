@@ -41,7 +41,7 @@ public class GameController : MonoBehaviour
         Academy a = Academy.Instance;
         Academy.Instance.AutomaticSteppingEnabled = false;
         Academy.Instance.OnEnvironmentReset += OnEnvironmentReset;
-        
+
     }
 
     private void OnEnvironmentReset()
@@ -53,7 +53,7 @@ public class GameController : MonoBehaviour
     {
         if (Academy.IsInitialized && Academy.Instance.IsCommunicatorOn)
         {
-            LoadSettings();            
+            LoadSettings();
         }
         Academy.Instance.EnvironmentStep();
     }
@@ -111,7 +111,7 @@ public class GameController : MonoBehaviour
         // Start a lighting fast automatic trade round
         pm.StartTrade();
         // Request an action from the current player. This also gives the turn to the next player and rolls the dice
-        pm.RequestAction();        
+        pm.RequestAction();
 
         uic.UpdateStepText();
         uic.UpdateAllPlayers(pm.players);
@@ -124,7 +124,7 @@ public class GameController : MonoBehaviour
         int dice = ThrowDice();
         uic.UpdateDiceRoll(dice);
         Notifier.singleton.Notify("Dice rolled! Outcome: " + dice);
-        if(dice != 7) { GiveResourcesToPlayers(dice); }
+        if (dice != 7) { GiveResourcesToPlayers(dice); }
         else { ExecuteRobberPhase(false); }
         uic.UpdateAllPlayers(pm.players);
     }
@@ -160,17 +160,17 @@ public class GameController : MonoBehaviour
     public void DrawDevelopmentCard(ColonyPlayer player)
     {
         int total = 0;
-        foreach(int x in developmentCards) { total += x; }
+        foreach (int x in developmentCards) { total += x; }
         int random = Random.Range(0, total);
         total = 0;
         for (int i = 0; i < developmentCards.Length; i++)
         {
             total += developmentCards[i];
-            if(total > random) { total = i; break; }
+            if (total > random) { total = i; break; }
         }
-        
-        if(total == Knight) { player.availableKnights++; developmentCards[Knight]--; }
-        else if(total == VictoryPoint) { player.AddReward(1); player.developmentPoints++; developmentCards[VictoryPoint]--; }
+
+        if (total == Knight) { player.availableKnights++; developmentCards[Knight]--; }
+        else if (total == VictoryPoint) { player.AddReward(1); player.developmentPoints++; developmentCards[VictoryPoint]--; }
         availableResources[Ore]++; availableResources[Wool]++; availableResources[Grain]++;
         // If we draw an ususable card, we do nothing!
     }
@@ -197,7 +197,7 @@ public class GameController : MonoBehaviour
                 throw new System.Exception("Cannot build a village on " + ntgp.ToString() + " because there is already something there!");
             }
             villageObject = Instantiate(villagePrefab, ntgp.position, Quaternion.identity, cp.transform);
-            if (!initial) { availableResources[Stone] += 1; availableResources[Wood] += 1; availableResources[Grain] += 1; availableResources[Wool] += 1; }
+            if (!initial) { availableResources[Brick] += 1; availableResources[Lumber] += 1; availableResources[Grain] += 1; availableResources[Wool] += 1; }
         }
 
         Building building = villageObject.GetComponent<Building>();
@@ -237,7 +237,7 @@ public class GameController : MonoBehaviour
         dest.Connect(start.index, b);
         start.Connect(dest.index, b);
         uic.NotifyOfBuilding(cp.ID, "S : " + start.index + " to " + dest.index);
-        if (!initial) { availableResources[Wood] += 1; availableResources[Stone] += 1; }
+        if (!initial) { availableResources[Lumber] += 1; availableResources[Brick] += 1; }
         return b;
     }
 
@@ -248,21 +248,17 @@ public class GameController : MonoBehaviour
         {
             // If the currentgridpoint has the robber on it, don't do anything
             if (t.GridPoint.Robber) { continue; }
-            HashSet<int> neighbouringGridPoints = t.GridPoint.connectedIndexes; // Get all tiles where there is possibly a building
-            foreach (int ntgpIndex in neighbouringGridPoints)
+            // Get all tiles where there is possibly a building
+            foreach (int ntgpIndex in t.GridPoint.connectedNTGPs)
             {
-                if (BoardController.ntgpIndexes.Contains(ntgpIndex))
+                NonTileGridPoint ntgp = (NonTileGridPoint)BoardController.singleton.allGridPoints[ntgpIndex];
+                // If we don't have enough resources to pay someone, we don't. 
+                if (ntgp.Building != null && availableResources[t.Resource] >= ntgp.Building.Type)
                 {
-                    NonTileGridPoint ntgp = (NonTileGridPoint)BoardController.singleton.allGridPoints[ntgpIndex];
-                    // If we don't have enough resources to pay someone, we don't. 
-                    if (ntgp.Building != null && availableResources[t.Resource] >= ntgp.Building.Type)
-                    {
-                        Building b = ntgp.Building;
-                        b.Owner.GiveResources(t.Resource, b.Type);
-                        availableResources[t.Resource] -= b.Type;
-                    }
+                    Building b = ntgp.Building;
+                    b.Owner.GiveResources(t.Resource, b.Type);
+                    availableResources[t.Resource] -= b.Type;
                 }
-                
             }
         }
     }

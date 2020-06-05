@@ -12,14 +12,13 @@ public class ColonyPlayer : Agent
     [SerializeField] private int playerID = 0;
 
     /// <summary>
-    /// The current available resources, indexed by their type (Wood = 0, Stone = 1 etc.)
+    /// The current available resources, indexed by their type (Lumber = 0, Brick = 1 etc.)
     /// </summary>
     public int[] resources;
     /// <summary>
     /// The available buildings in the stockpile, indexed by building type (Street = 0, Village = 1, City = 2)
     /// </summary>
     public int[] availableBuildings;
-    public int[] buildingOptions;
     /// <summary>
     /// The knight-cards still available to play.
     /// </summary>
@@ -32,9 +31,8 @@ public class ColonyPlayer : Agent
     public Color color = Color.blue;
     public TurnPhase turnPhase = TurnPhase.Pass;
     private bool largestArmy = false;
-
-    private readonly List<Building> buildings = new List<Building>();
     public Trader trader = null;
+    public HashSet<int> harbors = new HashSet<int>();
 
     public int ID { get { return playerID; } }
     public float Points { get { return GetCumulativeReward(); } }
@@ -42,12 +40,12 @@ public class ColonyPlayer : Agent
     {
         get
         {
-            if(buildings.Count == 0) { return null; }
-            return buildings[buildings.Count - 1];
+            if(Buildings.Count == 0) { return null; }
+            return Buildings[Buildings.Count - 1];
         }
     }
     public int LastBuildingType { get { return LastBuilding.Type; } }
-    public List<Building> Buildings { get { return buildings; } }
+    public List<Building> Buildings { get; } = new List<Building>();
     public int TotalResources
     {
         get
@@ -90,15 +88,15 @@ public class ColonyPlayer : Agent
     {
         resources = new int[5];
         availableBuildings = new int[] { 15, 5, 4 };
-        buildingOptions = new int[3];
         SetReward(0f);
         turnPhase = TurnPhase.Pass;
-        buildings.Clear();
+        Buildings.Clear();
         trader = GetComponent<Trader>();
         trader.Initialize();
         availableKnights = 0;
         developmentPoints = 0;
         usedKnights = 0;
+        harbors.Clear();
     }
 
     public override void OnEpisodeBegin() { ResetAll(); }
@@ -121,9 +119,11 @@ public class ColonyPlayer : Agent
             if(ntgp.Building == null) { sensor.AddObservation(0); }
             else { sensor.AddObservation(ntgp.Building.Owner == this ? 1 : -1); }
 
+            sensor.AddObservation(ntgp.harbor != NoHarbor);
+
             // Whether this NTGP is affected by the robber
             if (BoardController.singleton.RobberLocation == null) { sensor.AddObservation(0); }
-            else { sensor.AddObservation(BoardController.singleton.RobberLocation.connectedIndexes.Contains(ntgp.index)); }
+            else { sensor.AddObservation(BoardController.singleton.RobberLocation.connectedNTGPs.Contains(ntgp.index)); }
 
             for (int resourceID = 0; resourceID < resources.Length; resourceID++)
             {
@@ -136,7 +136,7 @@ public class ColonyPlayer : Agent
     {
         List<int> availableActions = new List<int>();
 
-        if(buildings.Count < 4)
+        if(Buildings.Count < 4)
         {
             List<int> actionMask = InitialActionMask();
             for (int i = 0; i < 3 * 54 + 1; i++) { if (!actionMask.Contains(i)) { availableActions.Add(i); } }
@@ -191,21 +191,22 @@ public class ColonyPlayer : Agent
             int buildingType = convertedAction[0];
             int gridPointNum = convertedAction[1];
             gridPointNum = BoardController.ntgpIndexes[gridPointNum];
-            NonTileGridPoint gp = (NonTileGridPoint)BoardController.singleton.allGridPoints[gridPointNum];
-            Notifier.singleton.Notify("Player " + name + " : " + BuildingNames[buildingType] + " - " + gp.ToString());
+            NonTileGridPoint ntgp = (NonTileGridPoint)BoardController.singleton.allGridPoints[gridPointNum];
+            Notifier.singleton.Notify("Player " + name + " : " + BuildingNames[buildingType] + " - " + ntgp.ToString());
 
             // 2. Remove the resources and the building from our stockpile
             availableBuildings[buildingType] -= 1;
-            if (buildings.Count >= 4) { RemoveResourcesForBuilding(buildingType); }
+            if (Buildings.Count >= 4) { RemoveResourcesForBuilding(buildingType); }
 
             // 3. Give the order to build the building at the desired GridPoint
-            if (buildingType == Village) { buildings.Add(GameController.singleton.CreateVillageOrCity(gp, false, this, buildings.Count < 4)); }
+            if (buildingType == Village) { Buildings.Add(GameController.singleton.CreateVillageOrCity(ntgp, false, this, Buildings.Count < 4)); }
             else if (buildingType == City)
             {
                 availableBuildings[Village] += 1;
-                buildings.Add(GameController.singleton.CreateVillageOrCity(gp, true, this, false));
+                Buildings.Add(GameController.singleton.CreateVillageOrCity(ntgp, true, this, false));
+                harbors.Add(ntgp.harbor);
             }
-            else if (buildingType == Street) { buildings.Add(GameController.singleton.CreateStreet(gp, this, buildings.Count < 4 ? LastBuilding.Position : null, buildings.Count < 4)); }
+            else if (buildingType == Street) { Buildings.Add(GameController.singleton.CreateStreet(ntgp, this, Buildings.Count < 4 ? LastBuilding.Position : null, Buildings.Count < 4)); }
         }
         else if(actionNum == BuyDevelopmentCard)
         {
@@ -227,7 +228,7 @@ public class ColonyPlayer : Agent
 
     public override void CollectDiscreteActionMasks(DiscreteActionMasker actionMasker)
     {
-        if(buildings.Count < 4) { actionMasker.SetMask(0, InitialActionMask()); }
+        if(Buildings.Count < 4) { actionMasker.SetMask(0, InitialActionMask()); }
         else
         {
             actionMasker.SetMask(0, NormalActionMask());
@@ -246,13 +247,13 @@ public class ColonyPlayer : Agent
                 int actionNumber = ConvertAction(buildingType, i);
 
                 // We have to build a village!
-                if (buildings.Count % 2 == 0 && buildingType != Village) { actionMask.Add(actionNumber); }
+                if (Buildings.Count % 2 == 0 && buildingType != Village) { actionMask.Add(actionNumber); }
                 // If we want to build a village, but this NTGP or one of it's neighbours is occupied
-                else if (buildings.Count % 2 == 0 && (ntgp.Building != null || ntgp.NeighbourOccupied())) { actionMask.Add(actionNumber); }
+                else if (Buildings.Count % 2 == 0 && (ntgp.Building != null || ntgp.NeighbourOccupied())) { actionMask.Add(actionNumber); }
                 // We need to build a street!
-                else if (buildings.Count % 2 == 1 && buildingType != Street) { actionMask.Add(actionNumber); }
+                else if (Buildings.Count % 2 == 1 && buildingType != Street) { actionMask.Add(actionNumber); }
                 // If we want to build a street, but there is no valid street connection between this and the last building. (1 means that they are connected but not by a street)
-                else if (buildings.Count % 2 == 1 && BoardController.singleton.connections[ntgp.index, LastBuilding.Position.index] != 1) { actionMask.Add(actionNumber); }
+                else if (Buildings.Count % 2 == 1 && BoardController.singleton.connections[ntgp.index, LastBuilding.Position.index] != 1) { actionMask.Add(actionNumber); }
             }
         }
         return actionMask;
@@ -281,7 +282,7 @@ public class ColonyPlayer : Agent
 
     public void GiveResources(int resourceID, int number = 1)
     {
-        // Correct the resourceID, because our array starts with Wood at 0, while the array of all resources starts with Wood at 1
+        // Correct the resourceID, because our array starts with Lumber at 0, while the array of all resources starts with Lumber at 1
         resources[resourceID] += number;
         trader.dirty = true;
     }
@@ -290,11 +291,11 @@ public class ColonyPlayer : Agent
     {
         if(buildingType == Village)
         {
-            return (resources[Grain] >= 1 && resources[Stone] >= 1 && resources[Wood] >= 1 && resources[Wool] >= 1);
+            return (resources[Grain] >= 1 && resources[Brick] >= 1 && resources[Lumber] >= 1 && resources[Wool] >= 1);
         }
         else if(buildingType == Street)
         {
-            return (resources[Stone] >= 1 && resources[Wood] >= 1);
+            return (resources[Brick] >= 1 && resources[Lumber] >= 1);
         }
         else if(buildingType == City)
         {
@@ -308,15 +309,15 @@ public class ColonyPlayer : Agent
         switch (buildingType)
         {
             case Street:
-                if(resources[Wood] <= 0 || resources[Stone] <= 0) { throw new Exception(name + " does not have the resources for a street!"); }
-                resources[Wood]--;
-                resources[Stone]--; 
+                if(resources[Lumber] <= 0 || resources[Brick] <= 0) { throw new Exception(name + " does not have the resources for a street!"); }
+                resources[Lumber]--;
+                resources[Brick]--; 
                 break;
             case Village:
-                if (resources[Wood] <= 0 || resources[Stone] <= 0 || resources[Grain] <= 0 || resources[Wool] <= 0) { throw new Exception(name + " does not have the resources for a village!"); }
-                resources[Wood]--;
+                if (resources[Lumber] <= 0 || resources[Brick] <= 0 || resources[Grain] <= 0 || resources[Wool] <= 0) { throw new Exception(name + " does not have the resources for a village!"); }
+                resources[Lumber]--;
                 resources[Wool]--;
-                resources[Stone]--;
+                resources[Brick]--;
                 resources[Grain]--;
                 break;
             case City:

@@ -52,11 +52,10 @@ MonoBehaviour:
   playerID: 0
   resources: 
   availableBuildings: 
-  buildingOptions: 
   availableKnights: 0
   usedKnights: 0
   developmentPoints: 0
-  color: {r: 0, g: 0, b: 1, a: 1}
+  color: {r: 0, g: 0.5104327, b: 1, a: 1}
   turnPhase: 1
   trader: {fileID: 0}
 --- !u!114 &5531525498888209184
@@ -72,7 +71,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_BrainParameters:
-    VectorObservationSize: 385
+    VectorObservationSize: 440
     NumStackedVectorObservations: 1
     VectorActionSize: a5000000
     VectorActionDescriptions: []
@@ -97,3 +96,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dirty: 0
   isBank: 0
+  resourceValues:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  availability:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  usefulness:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0

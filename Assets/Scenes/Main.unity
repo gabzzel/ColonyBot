@@ -918,6 +918,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dirty: 0
   isBank: 1
+  resourceValues:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  availability:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  usefulness:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
 --- !u!114 &330755333
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -941,6 +959,8 @@ MonoBehaviour:
   tilePrefab: {fileID: 5346649427322769310, guid: 34dc6639b56bca449a637d18720687de,
     type: 3}
   gridPointIndicator: {fileID: 5099529142434909208, guid: 6356894a16d09cd4bb49cd85b86c6f6d,
+    type: 3}
+  harborIndicator: {fileID: 4946688971563809234, guid: 1f18fe89137d9b84485ffb151d8a8a5c,
     type: 3}
   board: {fileID: 823868101}
   bestRobberTiles:
@@ -968,9 +988,11 @@ MonoBehaviour:
   - {fileID: 472954965}
   - {fileID: 12354571}
   - {fileID: 786028784}
-  useStandard: 1
+  useStandard: 0
   allowHighChanceNeighbours: 0
-  drawGridPointIndicators: 1
+  drawGridPointIndicators: 0
+  drawHarbors: 0
+  fixDesertToMiddle: 0
 --- !u!114 &330755334
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -986,7 +1008,7 @@ MonoBehaviour:
   pointsToWin: 9
   numberOfPlayers: 4
   showUI: 1
-  stepTime: 0.1
+  stepTime: 5
   villagePrefab: {fileID: 8832107849633449914, guid: 15c6ade5718c46f4684c64c38017a4b0,
     type: 3}
   cityPrefab: {fileID: 5336831520871488642, guid: d630e75f799761e49b101b2c84a9c4f7,
@@ -3382,11 +3404,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 5531525498888209184, guid: 5cf60f17f8ad30141a099f3ea654373e,
-        type: 3}
-      propertyPath: m_BrainParameters.VectorObservationSize
-      value: 386
-      objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
       propertyPath: color.g
@@ -3401,11 +3418,6 @@ PrefabInstance:
         type: 3}
       propertyPath: color.r
       value: 0.30824083
-      objectReference: {fileID: 0}
-    - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
-        type: 3}
-      propertyPath: turnPhase
-      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
@@ -4071,30 +4083,25 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 5531525498888209184, guid: 5cf60f17f8ad30141a099f3ea654373e,
-        type: 3}
-      propertyPath: m_BrainParameters.VectorObservationSize
-      value: 386
-      objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
       propertyPath: color.r
-      value: 1
+      value: 0.8396226
       objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
       propertyPath: color.b
-      value: 0.07212782
-      objectReference: {fileID: 0}
-    - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
-        type: 3}
-      propertyPath: turnPhase
-      value: 1
+      value: 0.54565924
       objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
       propertyPath: playerID
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
+        type: 3}
+      propertyPath: color.g
+      value: 0.019802418
       objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209188, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
@@ -7309,11 +7316,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 5531525498888209184, guid: 5cf60f17f8ad30141a099f3ea654373e,
-        type: 3}
-      propertyPath: m_BrainParameters.VectorObservationSize
-      value: 386
-      objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
       propertyPath: color.r
@@ -7328,11 +7330,6 @@ PrefabInstance:
         type: 3}
       propertyPath: color.b
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
-        type: 3}
-      propertyPath: turnPhase
-      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
@@ -7918,16 +7915,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 5531525498888209184, guid: 5cf60f17f8ad30141a099f3ea654373e,
-        type: 3}
-      propertyPath: m_BrainParameters.VectorObservationSize
-      value: 386
-      objectReference: {fileID: 0}
-    - target: {fileID: 5531525498888209185, guid: 5cf60f17f8ad30141a099f3ea654373e,
-        type: 3}
-      propertyPath: color.g
-      value: 0.5104327
-      objectReference: {fileID: 0}
     - target: {fileID: 5531525498888209188, guid: 5cf60f17f8ad30141a099f3ea654373e,
         type: 3}
       propertyPath: m_Name

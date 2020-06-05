@@ -61,7 +61,7 @@ public class PlayerManager : MonoBehaviour
         currentPlayer = queue.Dequeue();
     }
 
-    public void StartTrade() { CurrentPlayer.trader.StartTrading(); }
+    public void StartTrade() { if (CurrentPlayer.Buildings.Count >= 4) { CurrentPlayer.trader.StartTrading(); } }
 
     public void RequestAction()
     {
@@ -131,5 +131,21 @@ public class PlayerManager : MonoBehaviour
             player.LargestArmy = false;
             CurrentPlayer.LargestArmy = true;
         }
+    }
+
+    public List<ColonyPlayer> GetPlayersInOrder()
+    {
+        List<ColonyPlayer> result = new List<ColonyPlayer>() { CurrentPlayer };
+        int number = currentPlayer;
+        for (int i = 0; i < 3; i++)
+        {
+            number++;
+            if(number >= GameController.singleton.numberOfPlayers)
+            {
+                number = 0;
+            }
+            result.Add(players[number]);
+        }
+        return result;
     }
 }
