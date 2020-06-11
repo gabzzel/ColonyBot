@@ -25,7 +25,7 @@ public class NonTileGridPoint : GridPoint
         {
             if (value == null) { throw new System.Exception("Cannot build 'null' on a GridPoint."); }
             else if (value.Type == Village && building != null) { throw new System.Exception("Cannot build two villages on one GridPoint."); }
-            else if (value.Type == Street) { throw new System.Exception("Cannot build a street ON a GridPoint!"); }
+            else if (value.Type == Utility.Street) { throw new System.Exception("Cannot build a street ON a GridPoint!"); }
             else if (value.Type == City && value.Owner != building.Owner) { throw new System.Exception("Cannot build city on someone else's village!"); }
             else
             {

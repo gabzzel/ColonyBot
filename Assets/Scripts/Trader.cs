@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using static Utility;
 
 public class Trader : MonoBehaviour
@@ -15,7 +16,7 @@ public class Trader : MonoBehaviour
     [SerializeField] private float[] usefulness = new float[5];
     float useFulnessMax = 1f;
 
-    float mean = 0.5f;
+    [SerializeField] float mean = 0.5f;
     ColonyPlayer player = null;
 
     private void Awake()
@@ -43,7 +44,7 @@ public class Trader : MonoBehaviour
 
     public void UpdateResourceValues()
     {
-        mean = 0.5f;
+        mean = Mean(resourceValues);
 
         #region Availability
 
@@ -62,7 +63,7 @@ public class Trader : MonoBehaviour
         availabilityMax = Max(availability);
         for (int i = 0; i < availability.Length; i++)
         {
-            availability[i] = availabilityMax == 0f ? 1f : availability[i] / availabilityMax;
+            availability[i] = availability[i] == 0f ? 1f : 1f / availability[i];
         }
 
         #endregion
@@ -89,7 +90,6 @@ public class Trader : MonoBehaviour
         dirty = false;
     }
 
-
     public void StartTrading()
     {
         List<Trader> traders = new List<Trader>();
@@ -109,11 +109,13 @@ public class Trader : MonoBehaviour
             tries++;
             if (dirty) { UpdateResourceValues(); } // Update our resource values before trading
             Proposal prop = props.Values[props.Count - 1]; // Get the best proposal for us
-            props.RemoveAt(props.Count - 1); // Remove it from the list
-            
+            props.RemoveAt(props.Count - 1); // Remove it from the list       
+
             // Propose it to all other traders
             foreach (Trader t in traders)
             {
+                if(!t.isBank && GameController.singleton.bankTradeOnly) { continue; }
+
                 // If they accept..
                 if (t.Accept(prop))
                 {
@@ -161,6 +163,7 @@ public class Trader : MonoBehaviour
 
     public SortedList<float, Proposal> GetAllPossibleProposals()
     {
+        /*
         float max = float.MinValue;
         int maxRes = Desert;
 
@@ -176,9 +179,41 @@ public class Trader : MonoBehaviour
 
 
         if (maxRes == Desert || minRes == Desert || maxRes == minRes) { return new SortedList<float, Proposal>(); }
+        */
 
         SortedList<float, Proposal> proposals = new SortedList<float, Proposal>();
 
+        // The resource to take from the other trader
+        for (int rtt = 0; rtt < 5; rtt++)
+        {
+            // The number of resources to take from the other trader
+            for (int ntt = 1; ntt < 5; ntt++)
+            {
+                // If we can only trade with the bank and we want more than 1, than it's not possible
+                if(GameController.singleton.bankTradeOnly && ntt > 1) { continue; }
+
+                for (int rtg = 0; rtg < 5; rtg++)
+                {
+                    if(rtt == rtg) { continue; }
+
+                    for (int ntg = 0; ntg < 5; ntg++)
+                    {
+                        // If we can only trade with the bank, we can never accept trades worse than the best trade to the bank
+                        if(ntg > player.resources[rtg]) { continue; }
+                        else if (GameController.singleton.bankTradeOnly && (player.harbors.Contains(rtg) && ntg != 2 || player.harbors.Contains(RandomHarbor) && ntg != 3 || ntg != 4)) { continue; }
+                        
+                        Proposal prop = new Proposal(rtg, rtt, ntg, ntt);
+                        float value = WeighOwnProposal(prop);
+                        if(value > 0f && !proposals.ContainsKey(value))
+                        {
+                            proposals.Add(value, prop);
+                        }
+                    }
+                }
+            }
+        }
+
+        /*
         // Our number to give has a minimum of 1
         for (int numToGive = 1; numToGive <= 4; numToGive++)
         {
@@ -188,9 +223,14 @@ public class Trader : MonoBehaviour
             {
                 Proposal prop = new Proposal(minRes, maxRes, numToGive, numToTake);
                 float value = WeighOwnProposal(prop);
-                if (value > 0f && !proposals.ContainsKey(value)) { proposals.Add(value, prop); }
+                if (value > 0f && !proposals.ContainsKey(value)) 
+                { 
+                    proposals.Add(value, prop); 
+                }
             }
         }
+        */
+
 
         return proposals;
     }
@@ -199,7 +239,9 @@ public class Trader : MonoBehaviour
     private float CalculateValue(int resourceID, int number)
     {
         if(number == 0f) { return 1f; }
-        return (usefulness[resourceID] + availability[resourceID]) / (2f * number);
+        return Math.Min(usefulness[resourceID] * availability[resourceID], 1f);
+        //return (usefulness[resourceID] + availability[resourceID]) / (2f * number);
+        //return usefulness[resourceID] * number;
     }
 
     private float WeighOwnProposal(Proposal proposal)
@@ -215,6 +257,9 @@ public class Trader : MonoBehaviour
         float newGive = CalculateValue(proposal.resToGive, player.resources[proposal.resToGive] + proposal.numToGive);
         float newTake = CalculateValue(proposal.resToTake, Math.Max(player.resources[proposal.resToTake] - proposal.numToTake, 0));
 
+        return newGive - resourceValues[proposal.resToGive] + (newTake - resourceValues[proposal.resToTake]);
+
+        /*
         // The differences with the mean of the current and hypothetical 'new' values
         float oldGiveDiff = Mathf.Abs(mean - resourceValues[proposal.resToGive]);
         float oldTakeDiff = Mathf.Abs(mean - resourceValues[proposal.resToTake]);
@@ -223,6 +268,7 @@ public class Trader : MonoBehaviour
 
         // If the old difference is bigger than the new difference, we are getting a good trade.
         return (oldGiveDiff - newGiveDiff) + (oldTakeDiff - newTakeDiff);
+        */
     }
 
     public override string ToString()
@@ -256,12 +302,12 @@ public class Proposal
     }
     public override string ToString()
     {
-        return numToGive + " " + resToGive + " => " + numToTake + " " + resToTake;
+        return numToGive + " " + ResourceNames[resToGive] + " => " + numToTake + " " + ResourceNames[resToTake];
     }
 
     public string ToString(Trader from, Trader to)
     {
-        return numToGive + " " + resToGive + " (" + from.ToString() + ") => " + numToTake + " " + resToTake + " (" + to.ToString() + ")";
+        return numToGive + " " + ResourceNames[resToGive] + " (" + from.ToString() + ") => " + numToTake + " " + ResourceNames[resToTake] + " (" + to.ToString() + ")";
     }
 
     public static bool operator ==(Proposal p1, Proposal p2)

@@ -54,7 +54,6 @@ public class UIController : MonoBehaviour
     /// <param name="p"> The Player Object that contains all info of the player. </param>
     void UpdatePlayer(GameObject player, ColonyPlayer p)
     {
-        Image background = player.transform.GetChild(0).GetComponent<Image>();
         PlayerUI pui = player.GetComponent<PlayerUI>();
 
         pui.name.text = p.name;
@@ -65,9 +64,9 @@ public class UIController : MonoBehaviour
         pui.wool.text = "W: " + p.resources[Wool];
         pui.grain.text = "G: " + p.resources[Grain];
         pui.stone.text = "B: " + p.resources[Brick];
-        pui.knights.text = "K: " + p.availableKnights + " / " + p.usedKnights;
-        pui.knights.color = p.LargestArmy ? Color.green : Color.black;
-        pui.VPC.text = "VPC: " + p.developmentPoints;
+        //pui.knights.text = "K: " + p.availableKnights + " / " + p.usedKnights;
+        //pui.knights.color = p.LargestArmy ? Color.green : Color.black;
+        //pui.VPC.text = "VPC: " + p.developmentPoints;
     }
 
     public void NotifyOfBuilding(int playerID, string message)
@@ -92,6 +91,14 @@ public class UIController : MonoBehaviour
 
     public void UpdateStepText()
     {
-        stepText.text = "E " + Academy.Instance.EpisodeCount + " S " + Academy.Instance.StepCount;
+        stepText.text = "E " + (Academy.Instance.EpisodeCount - 1)+ " S " + Academy.Instance.StepCount;
+    }
+
+    public void ShowUI(bool value)
+    {
+        foreach(GameObject player in players)
+        {
+            player.SetActive(value);
+        }
     }
 }

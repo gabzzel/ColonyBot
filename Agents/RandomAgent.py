@@ -2,21 +2,14 @@ import random
 import numpy as np
 
 
-def action_to_string(action):
-    if action == 0:
-        return "Pass"
-    elif action % 3 == 1:
-        return "Street"
-    elif action % 3 == 2:
-        return "Village"
-    else:
-        return "City"
+
+
 
 
 class RandomAgent:
-    def __init__(self, id, behavior_name, action_branches, obs_shape):
+    def __init__(self, agent_id, behavior_name, action_branches, obs_shape):
         self.reward = 0
-        self.id = id
+        self.agent_id = agent_id
         self.behavior_name = behavior_name
         self.action_branches = action_branches
         self.obs_shape = obs_shape
@@ -38,5 +31,5 @@ class RandomAgent:
         resource_obs = obs[:5]  # The resources currently in hand
         grid_obs = obs[5:]
         processed_grid_obs = np.array(grid_obs)
-        processed_grid_obs.reshape((6, 54))
+        processed_grid_obs.reshape((8, 54))
         return processed_grid_obs

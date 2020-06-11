@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using static Utility;
 
 public class Building : MonoBehaviour
@@ -29,7 +30,7 @@ public class Building : MonoBehaviour
 
     public override string ToString()
     {
-        if(type != Street)
+        if(type != Utility.Street)
         {
             return type.ToString()[0] + " @ " + Position.position.ToString();
         }

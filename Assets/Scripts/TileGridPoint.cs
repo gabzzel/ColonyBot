@@ -41,4 +41,18 @@ public class TileGridPoint : GridPoint
         }
     }
     public float Value { get { return tile.Value; } }
+
+    public bool IsNeighbour(TileGridPoint t)
+    {
+        foreach(int ntgpIndex in connectedNTGPs)
+        {
+            NonTileGridPoint ntgp = (NonTileGridPoint)BoardController.singleton.allGridPoints[ntgpIndex];
+            foreach(int tgp in ntgp.connectedTGPs)
+            {
+                if(tgp == t.index) { return true; }
+            }
+        }
+
+        return false;
+    }
 }

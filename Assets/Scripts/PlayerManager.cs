@@ -113,6 +113,7 @@ public class PlayerManager : MonoBehaviour
         }
     }
 
+    /*
     public void CheckLargestArmy()
     {
         // Get the player with the largest army
@@ -133,6 +134,7 @@ public class PlayerManager : MonoBehaviour
         }
     }
 
+    */
     public List<ColonyPlayer> GetPlayersInOrder()
     {
         List<ColonyPlayer> result = new List<ColonyPlayer>() { CurrentPlayer };

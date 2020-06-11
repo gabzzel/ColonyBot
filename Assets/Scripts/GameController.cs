@@ -2,18 +2,23 @@
 using System.Collections.Generic;
 using static Utility;
 using Unity.MLAgents;
-using Unity.Mathematics;
 using Random = UnityEngine.Random;
 public class GameController : MonoBehaviour
 {
     public static GameController singleton = null;
+    [SerializeField] private bool gameStarted = false;
 
+    [Header("Game Settings")]
     [Range(6, 12, order = 1)] public int pointsToWin = 12;
     [Range(1, 4, order = 1)] public int numberOfPlayers = 3;
     public bool showUI = true;
     public float stepTime = 1f;
     private float stepTimer = 0f;
+    public bool bankTradeOnly = true;
+    public float winReward = 10f;
+    
 
+    [Header("Prefabs")]
     [SerializeField] private GameObject villagePrefab = null;
     [SerializeField] private GameObject cityPrefab = null;
     public GameObject streetPrefab = null;
@@ -23,9 +28,9 @@ public class GameController : MonoBehaviour
     private PlayerManager pm = null;
     private UIController uic = null;
 
-    [SerializeField] private bool gameStarted = false;
+    
     public int[] availableResources = new int[5];
-    [SerializeField] private int[] developmentCards = new int[3];
+    //[SerializeField] private int[] developmentCards = new int[3];
 
     public bool GameStarted { get { return gameStarted; } }
 
@@ -46,6 +51,7 @@ public class GameController : MonoBehaviour
 
     private void OnEnvironmentReset()
     {
+        LoadSettings();
         NewGame();
     }
 
@@ -62,10 +68,12 @@ public class GameController : MonoBehaviour
     {
         EnvironmentParameters ep = Academy.Instance.EnvironmentParameters;
         numberOfPlayers = Mathf.FloorToInt(ep.GetWithDefault("number_of_players", 4f));
-        pointsToWin = Mathf.FloorToInt(ep.GetWithDefault("points_to_win", 12f));
-        bc.useStandard = ep.GetWithDefault("standard_board", 0f) == 1;
+        pointsToWin = Mathf.FloorToInt(ep.GetWithDefault("points_to_win", 9f));
+        bc.useStandard = ep.GetWithDefault("standard_board", 1f) == 1;
         bc.allowHighChanceNeighbours = ep.GetWithDefault("allow_high_chance_neighbours", 0f) == 1;
         stepTime = Mathf.Max(ep.GetWithDefault("step_time", 1f), 0);
+        showUI = ep.GetWithDefault("show_ui", 1f) == 1f;
+        winReward = ep.GetWithDefault("win_reward", 10f);
     }
 
     public void NewGame()
@@ -76,7 +84,7 @@ public class GameController : MonoBehaviour
         }
 
         availableResources = new int[] { 19, 19, 19, 19, 19 };
-        developmentCards = new int[] { 14, 5, 6 };
+        //developmentCards = new int[] { 14, 5, 6 };
         Notifier.singleton.Notify("New Game Started!");
         // 1. Create a new board
         bc.CreateFilledBoard();
@@ -91,6 +99,7 @@ public class GameController : MonoBehaviour
         // 3. Initialize UI of the players
         uic.Initialize(pm.players);
         gameStarted = true;
+        uic.ShowUI(showUI);
     }
 
     private void FixedUpdate()
@@ -157,6 +166,7 @@ public class GameController : MonoBehaviour
         return dice1 + dice2;
     }
 
+    /*
     public void DrawDevelopmentCard(ColonyPlayer player)
     {
         int total = 0;
@@ -174,6 +184,8 @@ public class GameController : MonoBehaviour
         availableResources[Ore]++; availableResources[Wool]++; availableResources[Grain]++;
         // If we draw an ususable card, we do nothing!
     }
+
+    */
 
     public Building CreateVillageOrCity(NonTileGridPoint ntgp, bool city, ColonyPlayer cp, bool initial)
     {
@@ -267,8 +279,12 @@ public class GameController : MonoBehaviour
     {
         Notifier.singleton.Notify("Game Ended!");
         Notifier.singleton.Notify(winner.name + " has won!");
-        //winner.AddReward(10f);
+        if(winReward != 0f)
+        {
+            winner.AddReward(winReward);
+        }
         pm.SetAllPlayersDone(); // End the episodes
         gameStarted = false;
+        NextStep(); // One last step
     }
 }

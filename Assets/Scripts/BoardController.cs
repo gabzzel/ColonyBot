@@ -124,62 +124,8 @@ public class BoardController : MonoBehaviour
         else
         {
             List<int> indexes = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 };
-            List<int> standardNumbersCopy = standardNumbers.ToArray().ToList();
-            HashSet<Vector2Int> highChanceColrows = new HashSet<Vector2Int>();
-
-            int tries = 0;
-            while(standardNumbersCopy.Count > 0 && tries < 1000)
-            {
-                tries++;
-
-                int randomIndex = Random.Range(0, indexes.Count);
-                TileGridPoint t = (TileGridPoint)allGridPoints[tgpIndexes[indexes[randomIndex]]];
-                
-                // If we are checking the desert tile, we want to set the number to zero and just continue.
-                if(t.colRow == new Vector2Int(5, 5))
-                {
-                    t.Tile.SetNumber(0);
-                    indexes.RemoveAt(randomIndex);
-                    standardNumbersCopy.Remove(0);
-                    continue;                 
-                }
-
-                int randomNumberIndex = Random.Range(0, standardNumbersCopy.Count);
-                int randomNumber = standardNumbersCopy[randomNumberIndex];
-
-                // If we are not checking a 6 or 8, just continue as normal
-                if (randomNumber != 6 && randomNumber != 8)
-                {
-                    t.Tile.SetNumber(randomNumber);
-                    indexes.RemoveAt(randomIndex);
-                    standardNumbersCopy.RemoveAt(randomNumberIndex);
-                }
-                else
-                {
-                    bool found = false;
-                    if (!allowHighChanceNeighbours)
-                    {
-                        foreach (Vector2Int other in highChanceColrows)
-                        {
-                            if (Math.Abs(other.x - t.colRow.x) <= 2 || Math.Abs(other.y - t.colRow.y) <= 2)
-                            {
-                                found = true;
-                            }
-                        }
-                    }
-
-                    if (!found)
-                    {
-                        t.Tile.SetNumber(randomNumber);
-                        indexes.RemoveAt(randomIndex);
-                        standardNumbersCopy.RemoveAt(randomNumberIndex);
-                    }
-                }               
-            }
-
-
-            /*
-
+            //List<int> standardNumbersCopy = standardNumbers.ToArray().ToList();
+            
             // Go trough all tiles
             for (int i = 0; i < tiles.Count; i++)
             {
@@ -205,20 +151,46 @@ public class BoardController : MonoBehaviour
                     // Go trough all tiles
                     for (int i = 0; i < tiles.Count; i++)
                     {
-                        if (i != 9)
+                        Tile t = tiles[i];
+
+                        if (t.Resource != Desert)
                         {
                             int r = Random.Range(0, indexes.Count); // Get a random index
                             int index = indexes[r]; // Get the index of the number
                             int num = standardNumbers[index]; // The random number
-                            Tile t = tiles[i];
                             t.SetNumber(num);
                             indexes.RemoveAt(r);
                         }
+                        else
+                        {
+                            t.SetNumber(0);
+                        }
                     }
-                    if(tries > 1000) { throw new Exception("We couldn't create a board, even after 1000 tries!"); }
+                    if (tries > 1000) { throw new Exception("We couldn't create a board, even after 1000 tries!"); }
                 }
             }
-            */
+
+            else
+            {
+                indexes = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18 };
+                // Go trough all tiles
+                for (int i = 0; i < tiles.Count; i++)
+                {
+                    Tile t = tiles[i];
+                    if (t.Resource != Desert)
+                    {
+                        int r = Random.Range(0, indexes.Count); // Get a random index
+                        int index = indexes[r]; // Get the index of the number
+                        int num = standardNumbers[index]; // The random number
+                        t.SetNumber(num);
+                        indexes.RemoveAt(r);
+                    }
+                    else
+                    {
+                        t.SetNumber(0);
+                    }
+                }
+            }            
         }
     }
 
@@ -319,6 +291,11 @@ public class BoardController : MonoBehaviour
         tileGridPoints.Clear();
         tiles.Clear();
         allGridPoints.Clear();
+
+        for (int i = GameObject.FindGameObjectsWithTag("Harbor").Length - 1; i >= 0; i--)
+        {
+            Destroy(GameObject.FindGameObjectsWithTag("Harbor")[i]);
+        }
     }
 
     void CreateGridPoints()
@@ -534,7 +511,7 @@ public class BoardController : MonoBehaviour
     /// <returns> Whether this GridPoint is eligible. </returns>
     public bool PossibleBuildingSite(NonTileGridPoint gp, ColonyPlayer player, int buildingType, bool free = false)
     {
-        if (buildingType == Street) { return PossibleStreetBuildingSite(gp, player); }
+        if (buildingType == Utility.Street) { return PossibleStreetBuildingSite(gp, player); }
         else if (buildingType == Village) { return PossibleVillageBuildingSite(gp, player, free); }
         else { return PossibleCityBuildingSite(gp, player); }
     }
@@ -585,7 +562,7 @@ public class BoardController : MonoBehaviour
         // 1. Our start must exist
         // 2. There must not exist a street already between start and end
         // 3. The "end" / "to" cannot be occupied by another player
-        return start != null && connections[start.index, end.index] == 1 && connections[end.index, start.index] == 1; // && (end.Building == null || end.OccupiedBy(player));
+        return start != null && connections[start.index, end.index] == 1 && connections[end.index, start.index] == 1 && (end.Building == null || end.OccupiedBy(player));
     }
 
     public TileGridPoint GetBestTileForRobber(ColonyPlayer player)
@@ -637,4 +614,28 @@ public class BoardController : MonoBehaviour
         if (players.Count == 0) { throw new System.Exception("Cannot return player when no players are connected to " + tgp.ToString()); }
         return players[Random.Range(0, players.Count)];
     }
+
+    /*
+    public int LongestRoadLength(ColonyPlayer player)
+    {
+        Stack<Street> stack = new Stack<Street>();
+        HashSet<Street> seen = new HashSet<Street>();
+
+        foreach(Building b in player.Buildings)
+        {
+            if(b.Type == Utility.Street)
+            {
+                stack.Push((Street)b);
+            } 
+        }
+
+        while(stack.Count > 0)
+        {
+            Street street = stack.Pop();
+
+        }
+
+    }
+
+    */
 }

@@ -27,8 +27,8 @@ public static class Utility
     /* Action indexes */
     public const int Pass = 0;
     // 1 - 163 are reserved for building!
-    public const int BuyDevelopmentCard = 163;
-    public const int PlayKnightCard = 164;
+    //public const int BuyDevelopmentCard = 163;
+    //public const int PlayKnightCard = 164;
 
     /* Harbor types */
     public const int RandomHarbor = 5;
@@ -91,5 +91,17 @@ public static class Utility
         int sum = 0;
         foreach(int i in array) { sum += i; }
         return sum;
+    }
+
+    public static float Mean(float[] array)
+    {
+        float sum = Sum(array);
+        return sum / array.Length;
+    }
+
+    public static int Mean(int[] array)
+    {
+        int sum = Sum(array);
+        return sum / array.Length;
     }
 }

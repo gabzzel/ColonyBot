@@ -19,18 +19,12 @@ public class ColonyPlayer : Agent
     /// The available buildings in the stockpile, indexed by building type (Street = 0, Village = 1, City = 2)
     /// </summary>
     public int[] availableBuildings;
-    /// <summary>
-    /// The knight-cards still available to play.
-    /// </summary>
-    public int availableKnights = 0;
-    public int usedKnights = 0;
-    /// <summary>
-    /// Points obtained by buying Development Cards and drawing a victory point.
-    /// </summary>
-    public int developmentPoints = 0;
+    //public int availableKnights = 0;
+    //public int usedKnights = 0;
+    //public int developmentPoints = 0;
     public Color color = Color.blue;
     public TurnPhase turnPhase = TurnPhase.Pass;
-    private bool largestArmy = false;
+    //private bool largestArmy = false;
     public Trader trader = null;
     public HashSet<int> harbors = new HashSet<int>();
 
@@ -58,17 +52,6 @@ public class ColonyPlayer : Agent
             return number;
         }
     }
-    public bool LargestArmy
-    {
-        get { return largestArmy; }
-
-        set
-        {
-            if(usedKnights < 3) { throw new Exception("Cannot set largest army value if we do not have 3 knights used! "); }
-            largestArmy = value;
-            AddReward(value ? 2f : -2f);
-        }
-    }
 
     private void Awake()
     {
@@ -93,9 +76,9 @@ public class ColonyPlayer : Agent
         Buildings.Clear();
         trader = GetComponent<Trader>();
         trader.Initialize();
-        availableKnights = 0;
-        developmentPoints = 0;
-        usedKnights = 0;
+        //availableKnights = 0;
+        //developmentPoints = 0;
+        //usedKnights = 0;
         harbors.Clear();
     }
 
@@ -107,24 +90,26 @@ public class ColonyPlayer : Agent
         foreach(int res in resources) { sensor.AddObservation(res); }
         
         // KNIGHT CARD INPUTS
-        sensor.AddObservation(availableKnights);
-        sensor.AddObservation(usedKnights);
-        sensor.AddObservation(largestArmy);
+        //sensor.AddObservation(availableKnights);
+        //sensor.AddObservation(usedKnights);
+        //sensor.AddObservation(largestArmy);
 
         // GRIDPOINT INPUTS
         // For each gridpoint, get the following info : if there is a building and the value per resource
         foreach(NonTileGridPoint ntgp in BoardController.singleton.nonTileGridPoints)
         {
-            // If we have a building : 1, if someone else has a building : -1, otherwise 0
+            // 1. If we have a building : 1, if someone else has a building : -1, otherwise 0
             if(ntgp.Building == null) { sensor.AddObservation(0); }
             else { sensor.AddObservation(ntgp.Building.Owner == this ? 1 : -1); }
 
+            // 2. If the gridpoint is also a harbor
             sensor.AddObservation(ntgp.harbor != NoHarbor);
 
-            // Whether this NTGP is affected by the robber
+            // 3. Whether this NTGP is affected by the robber
             if (BoardController.singleton.RobberLocation == null) { sensor.AddObservation(0); }
             else { sensor.AddObservation(BoardController.singleton.RobberLocation.connectedNTGPs.Contains(ntgp.index)); }
 
+            // 4 to 8. The resource-values of every gridpoint
             for (int resourceID = 0; resourceID < resources.Length; resourceID++)
             {
                 sensor.AddObservation(ntgp.ResourceValue(resourceID) / 3f);  // Normalize for the fact that we can be attached to 3 tiles
@@ -144,7 +129,7 @@ public class ColonyPlayer : Agent
         else
         {
             HashSet<int> mask = NormalActionMask();
-            for (int i = 0; i < 165; i++)
+            for (int i = 0; i < 163; i++)
             {
                 if (!mask.Contains(i)) { availableActions.Add(i); }
             }
@@ -167,6 +152,7 @@ public class ColonyPlayer : Agent
         // Don't do anything if the game isn't started yet
         if (!GameController.singleton.GameStarted)
         {
+            if (Academy.IsInitialized && Academy.Instance.StepCount > 1) { EndEpisode(); }
             Notifier.singleton.Notify(name + " was told to take an action before the start of the game!");
             return;
         }
@@ -182,7 +168,7 @@ public class ColonyPlayer : Agent
             return; // Don't do anything else
         }
         // If we do not pass, say that we are building now
-        else if (actionNum > 0 && actionNum < 163)
+        else
         {
             turnPhase = TurnPhase.Build;
 
@@ -208,22 +194,6 @@ public class ColonyPlayer : Agent
             }
             else if (buildingType == Street) { Buildings.Add(GameController.singleton.CreateStreet(ntgp, this, Buildings.Count < 4 ? LastBuilding.Position : null, Buildings.Count < 4)); }
         }
-        else if(actionNum == BuyDevelopmentCard)
-        {
-            turnPhase = TurnPhase.Build;
-            GameController.singleton.DrawDevelopmentCard(this);
-            Notifier.singleton.Notify(name + " buys DevCard.");
-            resources[Grain]--; resources[Ore]--; resources[Wool]--;
-        }
-        else if(actionNum == PlayKnightCard)
-        {
-            turnPhase = TurnPhase.Build;
-            availableKnights--;
-            usedKnights++;
-            GameController.singleton.ExecuteRobberPhase(true);
-            Notifier.singleton.Notify(name + " plays KnightCard.");
-            if (usedKnights >= 3) { PlayerManager.singleton.CheckLargestArmy(); }
-        }
     }
 
     public override void CollectDiscreteActionMasks(DiscreteActionMasker actionMasker)
@@ -237,7 +207,7 @@ public class ColonyPlayer : Agent
 
     private List<int> InitialActionMask()
     {
-        List<int> actionMask = new List<int>{ Pass, BuyDevelopmentCard, PlayKnightCard };
+        List<int> actionMask = new List<int> { Pass }; //,BuyDevelopmentCard, PlayKnightCard };
         for (int i = 0; i < BoardController.ntgpIndexes.Count; i++)
         {
             int ntgpIndex = BoardController.ntgpIndexes[i];
@@ -251,7 +221,7 @@ public class ColonyPlayer : Agent
                 // If we want to build a village, but this NTGP or one of it's neighbours is occupied
                 else if (Buildings.Count % 2 == 0 && (ntgp.Building != null || ntgp.NeighbourOccupied())) { actionMask.Add(actionNumber); }
                 // We need to build a street!
-                else if (Buildings.Count % 2 == 1 && buildingType != Street) { actionMask.Add(actionNumber); }
+                else if (Buildings.Count % 2 == 1 && buildingType != Utility.Street) { actionMask.Add(actionNumber); }
                 // If we want to build a street, but there is no valid street connection between this and the last building. (1 means that they are connected but not by a street)
                 else if (Buildings.Count % 2 == 1 && BoardController.singleton.connections[ntgp.index, LastBuilding.Position.index] != 1) { actionMask.Add(actionNumber); }
             }
@@ -273,9 +243,6 @@ public class ColonyPlayer : Agent
                 else if (!BoardController.singleton.PossibleBuildingSite(ntgp, this, buildingType)) { result.Add(actionNumber); }
             }
         }
-
-        if(resources[Wool] < 1 || resources[Ore] < 1 || resources[Grain] < 1) { result.Add(BuyDevelopmentCard); }
-        if(availableKnights == 0) { result.Add(PlayKnightCard); }
 
         return result;
     }
@@ -308,7 +275,7 @@ public class ColonyPlayer : Agent
     {
         switch (buildingType)
         {
-            case Street:
+            case Utility.Street:
                 if(resources[Lumber] <= 0 || resources[Brick] <= 0) { throw new Exception(name + " does not have the resources for a street!"); }
                 resources[Lumber]--;
                 resources[Brick]--; 

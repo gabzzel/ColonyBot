@@ -936,6 +936,7 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  mean: 0.5
 --- !u!114 &330755333
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -988,10 +989,10 @@ MonoBehaviour:
   - {fileID: 472954965}
   - {fileID: 12354571}
   - {fileID: 786028784}
-  useStandard: 0
+  useStandard: 1
   allowHighChanceNeighbours: 0
   drawGridPointIndicators: 0
-  drawHarbors: 0
+  drawHarbors: 1
   fixDesertToMiddle: 0
 --- !u!114 &330755334
 MonoBehaviour:
@@ -1005,10 +1006,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ca1b2e476ff4c1a47a79597571279323, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gameStarted: 0
   pointsToWin: 9
   numberOfPlayers: 4
   showUI: 1
-  stepTime: 5
+  stepTime: 0.01
+  bankTradeOnly: 1
   villagePrefab: {fileID: 8832107849633449914, guid: 15c6ade5718c46f4684c64c38017a4b0,
     type: 3}
   cityPrefab: {fileID: 5336831520871488642, guid: d630e75f799761e49b101b2c84a9c4f7,
@@ -1016,9 +1019,7 @@ MonoBehaviour:
   streetPrefab: {fileID: 6487479829580133341, guid: 222b512e014cc8c418e4ab02aa56720e,
     type: 3}
   robber: {fileID: 830440312}
-  gameStarted: 0
   availableResources: 0000000000000000000000000000000000000000
-  developmentCards: 000000000000000000000000
 --- !u!114 &330755335
 MonoBehaviour:
   m_ObjectHideFlags: 0

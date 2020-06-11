@@ -62,7 +62,7 @@ public class Tile : MonoBehaviour
             GridPoint gp = BoardController.singleton.allGridPoints[neighbourIndex];
             foreach(int secondDegreeIndex in gp.connectedTGPs)
             {
-                if (neighbourIndex != gridPoint.index)
+                if (secondDegreeIndex != gridPoint.index)
                 {
                     result.Add(((TileGridPoint)BoardController.singleton.allGridPoints[secondDegreeIndex]).Tile);
                 }
@@ -70,6 +70,11 @@ public class Tile : MonoBehaviour
         }
 
         return result;
+    }
+
+    public bool IsNeighbour(Tile t)
+    {
+        return GridPoint.IsNeighbour(t.GridPoint);
     }
 
     public override string ToString()
