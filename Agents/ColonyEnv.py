@@ -4,6 +4,8 @@ import numpy as np
 from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
 from mlagents_envs.side_channel.environment_parameters_channel import EnvironmentParametersChannel
+import tensorflow as tf
+import keras.backend as K
 
 import ScriptedAgents
 
@@ -15,7 +17,7 @@ side_channel = EnvironmentParametersChannel()
 side_channel.set_float_parameter("step_time", 0.01)
 side_channel.set_float_parameter("show_ui", 0)
 side_channel.set_float_parameter("standard_board", 1)
-side_channel.set_float_parameter("points_to_win", 5)
+side_channel.set_float_parameter("points_to_win", 9)
 engine_configuration_channel.set_configuration_parameters(time_scale=1.0, height=1000, width=1000)
 env = UnityEnvironment(base_port=5006, file_name=env_name, side_channels=[side_channel, engine_configuration_channel])
 
@@ -25,13 +27,14 @@ agents = dict()
 max_episode = 10
 steps = 0
 max_steps = 3000
-agent_types = ["R", "P", "G", "S"]
+agent_types = ["R", "R", "R", "R"]
 
 for episode in range(max_episode):
     print("Start episode", episode)
+    sess = tf.compat.v1.Session()
+    K.set_session(sess)
     env.reset()
-    bn = env.get_behavior_names()
-    behaviour_name = bn[0]
+    behaviour_name = env.get_behavior_names()[0]
     done = False
     steps = 0
     agents = dict()
@@ -45,6 +48,8 @@ for episode in range(max_episode):
         steps += 1
         
         if steps > max_steps:
+            for agent_id in agents.keys():
+                agents[agent_id].reset()
             done = True
             break
 
@@ -55,11 +60,12 @@ for episode in range(max_episode):
         agent_ids = decision_steps.agent_id  # The global ID's (ndarray) of the agent in need of decision
         # local_id = decision_step.agent_id_to_index[agent_id[0]]  # The index of this agent in the decision step info
 
-        if len(terminal_steps) > 0:
+        if len(terminal_steps) > 0 and len(agents) > 0:
             reward_string = "| "
             for agent_id in terminal_steps.agent_id:
                 terminal_step = terminal_steps[agent_id]
                 reward_string += agents[agent_id].__getType__() + " (" + str(agent_id) + ") = " + str(terminal_step.reward + agents[agent_id].reward) + " | "
+                agents[agent_id].reset()
             print("Episode", str(episode), "ended in ", steps, "steps :", reward_string)
             done = True
 
@@ -73,7 +79,11 @@ for episode in range(max_episode):
                 # Create a new agent if no agent exists
                 if agents.keys().__contains__(agent_id) is False:
                     agent = None
-                    random_type = random.choice(agent_types)
+                    random_type = agent_types[agent_id]
+
+                    if random_type == "?":
+                        random_type = random.choice(ScriptedAgents.all_agent_types)
+
                     if random_type == "R":
                         agent = ScriptedAgents.RandomAgent(agent_id=agent_id,
                                                            behavior_name=behaviour_name,
@@ -83,8 +93,7 @@ for episode in range(max_episode):
                         agent = ScriptedAgents.PassiveAgent(agent_id=agent_id,
                                                             behavior_name=behaviour_name,
                                                             action_shape=branch_shapes[0],
-                                                            obs_shape=behaviour_spec.observation_shapes[0],
-                                                            pass_chance=0.99)
+                                                            obs_shape=behaviour_spec.observation_shapes[0])
                     elif random_type == "G":
                         agent = ScriptedAgents.GreedyAgent(agent_id=agent_id,
                                                            behavior_name=behaviour_name,

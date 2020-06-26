@@ -12,10 +12,12 @@ def action_to_string(action):
     else:
         return "City"
 
+
 def preprocess_grid_obs(obs):
     grid_obs = obs[5:]
     processed_grid_obs = np.array(grid_obs)
     return np.reshape(processed_grid_obs, (54, 8))
+
 
 def get_random_action(mask):
     possible_actions = []
@@ -25,7 +27,11 @@ def get_random_action(mask):
             possible_actions.append(i)
     return random.choice(possible_actions)
 
-class ScriptedAgent:
+
+all_agent_types = ["R", "P", "G", "S"]
+
+
+class Agent:
     def __init__(self, agent_id, behavior_name, action_shape, obs_shape):
         self.reward = 0
         self.agent_id = agent_id
@@ -44,7 +50,7 @@ class ScriptedAgent:
         return "Default"
 
 
-class RandomAgent(ScriptedAgent):
+class RandomAgent(Agent):
     def __init__(self, agent_id, behavior_name, action_shape, obs_shape):
         super().__init__(agent_id, behavior_name, action_shape, obs_shape)
 
@@ -55,8 +61,8 @@ class RandomAgent(ScriptedAgent):
         return "RandomAgent"
 
 
-class PassiveAgent(ScriptedAgent):
-    def __init__(self, agent_id, behavior_name, action_shape, obs_shape, pass_chance):
+class PassiveAgent(Agent):
+    def __init__(self, agent_id, behavior_name, action_shape, obs_shape, pass_chance=0.99):
         self.pass_chance = pass_chance
         super().__init__(agent_id, behavior_name, action_shape, obs_shape)
 
@@ -75,7 +81,7 @@ class PassiveAgent(ScriptedAgent):
         return "PassiveAgent"
 
 
-class GreedyAgent(ScriptedAgent):
+class GreedyAgent(Agent):
 
     def __take_action__(self, obs, mask):
         possible_actions = []
@@ -108,7 +114,7 @@ class GreedyAgent(ScriptedAgent):
         return "GreedyAgent"
 
 
-class StreetBuilderAgent(ScriptedAgent):
+class StreetBuilderAgent(Agent):
     def __init__(self, agent_id, behavior_name, action_shape, obs_shape):
         self.villages_build = 0
         super().__init__(agent_id, behavior_name, action_shape, obs_shape)
@@ -118,7 +124,7 @@ class StreetBuilderAgent(ScriptedAgent):
         # If we cannot pass, we are in the initial phase.
         # Choose the best brick and wood placements
         if mask[0]:
-            pos = self.get_best_village_placement(obs=obs, res=self.villages_build, mask=mask)
+            pos = self.get_best_village_placement(obs=obs, mask=mask)
             if pos is -1:
                 return get_random_action(mask=mask)
             return 2 + 3 * pos
@@ -130,17 +136,19 @@ class StreetBuilderAgent(ScriptedAgent):
                 if not mask[action]:
                     return action
 
-        # Otherwise, pass.
+        # Otherwise, pass with 50% chance
+        if random.random() > 0.5:
+            return get_random_action(mask=mask)
         return 0
 
-    def get_best_village_placement(self, obs, res, mask):
+    def get_best_village_placement(self, obs, mask):
         grid_obs = preprocess_grid_obs(obs=obs)
         best_index = -1
         best_value = -1
         for i in range(54):
-            wood_value = grid_obs[i][4 + res]
-            if wood_value > best_value and not mask[2 + 3 * i]:
-                best_value = wood_value
+            value = grid_obs[i][3] + grid_obs[i][4]
+            if value > best_value and not mask[2 + 3 * i]:
+                best_value = value
                 best_index = i
         return best_index
 
