@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.UIElements;
 using static Utility;
 
 public class Trader : MonoBehaviour
@@ -42,7 +43,7 @@ public class Trader : MonoBehaviour
         mean = 0.5f;
     }
 
-    public void UpdateResourceValues()
+    private void UpdateResourceValues()
     {
         mean = Mean(resourceValues);
 
@@ -92,54 +93,97 @@ public class Trader : MonoBehaviour
 
     public void StartTrading()
     {
-        List<Trader> traders = new List<Trader>();
-        foreach(ColonyPlayer player in PlayerManager.singleton.GetPlayersInOrder())
+        if(Sum(player.resources) > 7)
         {
-            traders.Add(player.trader);
-        }
-        traders.Add(bank);
-
-        // Get all possible proposals based on our resources
-        //List<Proposal> props = GetAllPossibleProposals(true);
-        UpdateResourceValues();
-        SortedList<float, Proposal> props = GetAllPossibleProposals();
-        int tries = 0;
-        while (props.Count > 0 && tries < 1000)
-        {
-            tries++;
-            if (dirty) { UpdateResourceValues(); } // Update our resource values before trading
-            Proposal prop = props.Values[props.Count - 1]; // Get the best proposal for us
-            props.RemoveAt(props.Count - 1); // Remove it from the list       
-
-            // Propose it to all other traders
-            foreach (Trader t in traders)
+            Proposal p = GetNextProposal();
+            int tries = 0;
+            while(p != Proposal.Empty && tries <= 200)
             {
-                if(!t.isBank && GameController.singleton.bankTradeOnly) { continue; }
-
-                // If they accept..
-                if (t.Accept(prop))
+                if (bank.Accept(p))
                 {
-                    // Give and remove the resources according to the proposal
-                    player.GiveResources(prop.resToTake, prop.numToTake);
-                    player.GiveResources(prop.resToGive, -1 * prop.numToGive);
-                    string notification = prop.ToString(this, t);
-                    Notifier.singleton.Notify(notification);
-                    props = GetAllPossibleProposals(); // Update the new proposal we can go for
+                    GameController.singleton.availableResources[p.resToTake] -= p.numToTake;
+                    GameController.singleton.availableResources[p.resToGive] += p.numToGive;
+                    player.resources[p.resToTake] += p.numToTake;
+                    player.resources[p.resToGive] -= p.numToGive;
+                    Notifier.singleton.Notify(p.ToString(this, bank));
+                    p = GetNextProposal();
+                }
+                else
+                {
                     break;
                 }
+
+                tries++;
             }
+
         }
+        else
+        {
+            return;
+        }
+    }
+
+    public Proposal GetNextProposal()
+    {
+        int highestResource = -1;
+        int highestNumber = int.MinValue;
+
+        int lowestResource = -1;
+        int lowestNumber = int.MaxValue;
+
+        // Go through all resources of our player...
+        for (int i = 0; i < player.resources.Length; i++)
+        {
+            int rn = player.resources[i]; // The current resource we are checking
+
+            // If our current resource is the one we have the most of (until now) AND... 
+            // ( We have at least 2 and are connected to a trading harbor of this resources OR...
+            // We have at least 3 and are connected to a random harbor OR...
+            // We have at least 4 )
+            if(rn > highestNumber && (rn >= 2 && player.harbors.Contains(i) || rn >= 3 && player.harbors.Contains(RandomHarbor) || rn >= 4))
+            {
+                highestNumber = rn;
+                highestResource = i;
+            }
+            else if(rn < lowestNumber && rn < 3)
+            {
+                lowestNumber = rn;
+                lowestResource = i;
+            }
+           
+        }
+
+        if(lowestNumber >= 4 || lowestNumber >= highestNumber || highestResource == -1 || highestNumber <= 0 || lowestResource == -1) { return Proposal.Empty; }
+        else if(highestNumber >= 2 && player.harbors.Contains(highestResource))
+        {
+            return new Proposal(highestResource, lowestResource, 2, 1);
+        }
+        else if(highestNumber >= 3 && player.harbors.Contains(RandomHarbor))
+        {
+            return new Proposal(highestResource, lowestResource, 3, 1);
+        }
+        else if(highestNumber >= 4)
+        {
+            return new Proposal(highestResource, lowestResource, 4, 1);
+        }
+
+        return Proposal.Empty;
     }
 
     public bool Accept(Proposal proposal)
     {
         // Take is TAKEN FROM US and give = GIVEN TO US
 
-        // If we are the bank, we only accept trades that are 4 to 1. 
+        if(proposal == Proposal.Empty) { return false; }
+
+        // Only accept trades if we are the bank
         if (isBank) 
         {
             HashSet<int> harbors = PlayerManager.singleton.CurrentPlayer.harbors;
+            GameController gc = GetComponent<GameController>();
 
+            // Always deny if the bank doesn't have the resources
+            if(gc.availableResources[proposal.resToTake] < proposal.numToTake) { return false; }
             // If the current player is on a harbor that allows him/her to trade 2:1, only accept those
             if(harbors.Contains(proposal.resToGive) && proposal.numToGive == 2 && proposal.numToTake == 1) { return true; }
             // Else if the current player is on a randomharbor, only allow 3:1 trades
@@ -148,16 +192,7 @@ public class Trader : MonoBehaviour
             else if(proposal.numToGive == 4 && proposal.numToTake == 1) { return true; }
             else { return false; }
         }
-        else if (isBank) { return false; }
 
-        // Accept everything for now, if we can afford it
-        if (player.resources[proposal.resToTake] < proposal.numToTake) { return false; }
-        else if (WeighProposal(proposal) > 0f)
-        {
-            player.resources[proposal.resToTake] -= proposal.numToTake;
-            player.resources[proposal.resToGive] += proposal.numToGive;
-            return true; // TODO!
-        }
         return false;
     }
 
@@ -295,11 +330,22 @@ public class Proposal
     public Proposal(int resourceToGive, int resourceToTake, int ntg, int ntt)
     {
         if (resourceToGive == resourceToTake) { throw new System.Exception("Cannot create proposal with the same resources as give and take!"); }
+        else if(ntg <= 0 || ntt <= 0) { throw new Exception("Cannot create proposal with 0 or less resources to give or take."); }
+        else if(resourceToGive < 0 || resourceToGive > 4 || resourceToTake < 0 || resourceToTake > 4) { throw new Exception("Cannot create proposal with undefined resource : " + resourceToGive + " and " + resourceToTake); }
         this.resToGive = resourceToGive;
         this.resToTake = resourceToTake;
         this.numToGive = ntg;
         this.numToTake = ntt;
     }
+
+    private Proposal() 
+    {
+        resToGive = 0;
+        resToTake = 0;
+        numToGive = 0;
+        numToTake = 0;
+    }
+
     public override string ToString()
     {
         return numToGive + " " + ResourceNames[resToGive] + " => " + numToTake + " " + ResourceNames[resToTake];
@@ -308,6 +354,11 @@ public class Proposal
     public string ToString(Trader from, Trader to)
     {
         return numToGive + " " + ResourceNames[resToGive] + " (" + from.ToString() + ") => " + numToTake + " " + ResourceNames[resToTake] + " (" + to.ToString() + ")";
+    }
+
+    public static Proposal Empty
+    {
+        get { return new Proposal(); }
     }
 
     public static bool operator ==(Proposal p1, Proposal p2)

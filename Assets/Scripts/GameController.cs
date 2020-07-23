@@ -16,6 +16,7 @@ public class GameController : MonoBehaviour
     private float stepTimer = 0f;
     public bool bankTradeOnly = true;
     public float winReward = 10f;
+    public float loseReward = -10f;
     
 
     [Header("Prefabs")]
@@ -74,6 +75,7 @@ public class GameController : MonoBehaviour
         stepTime = Mathf.Max(ep.GetWithDefault("step_time", 1f), 0);
         showUI = ep.GetWithDefault("show_ui", 1f) == 1f;
         winReward = ep.GetWithDefault("win_reward", 10f);
+        loseReward = ep.GetWithDefault("loss_reward", -10f);
     }
 
     public void NewGame()
@@ -100,6 +102,7 @@ public class GameController : MonoBehaviour
         uic.Initialize(pm.players);
         gameStarted = true;
         uic.ShowUI(showUI);
+        UIController.singleton.turnCount = 0;
     }
 
     private void FixedUpdate()
@@ -279,12 +282,15 @@ public class GameController : MonoBehaviour
     {
         Notifier.singleton.Notify("Game Ended!");
         Notifier.singleton.Notify(winner.name + " has won!");
-        if(winReward != 0f)
+        foreach(ColonyPlayer p in pm.players)
         {
-            winner.AddReward(winReward);
+            if(p == winner) { p.AddReward(winReward); }
+            else { p.AddReward(loseReward); }
         }
         pm.SetAllPlayersDone(); // End the episodes
         gameStarted = false;
-        NextStep(); // One last step
+        uic.UpdateStepText();
+        uic.UpdateAllPlayers(pm.players);
+        Academy.Instance.EnvironmentStep();
     }
 }

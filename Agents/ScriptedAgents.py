@@ -39,12 +39,22 @@ class Agent:
         self.action_shape = action_shape
         self.obs_shape = obs_shape
 
-    def take_action(self, obs, mask) -> np.array:
+        self.prev_observation = np.zeros(shape=obs_shape)
+        self.prev_mask = [False] * 163
+        self.prev_reward = 0
+        self.prev_action = 0
+
+
+    def choose_action(self, obs, mask) -> np.array:
         print("Do not call take_action on ScriptedAgent directly!")
         return np.zeros(shape=self.action_shape)
 
     def reset(self):
         self.reward = 0
+        self.prev_observation = np.zeros(shape=self.obs_shape)
+        self.prev_mask = [False] * 163
+        self.prev_reward = 0
+        self.prev_action = 0
 
     def getType(self):
         return "Default"
@@ -54,7 +64,7 @@ class RandomAgent(Agent):
     def __init__(self, agent_id, behavior_name, action_shape, obs_shape):
         super().__init__(agent_id, behavior_name, action_shape, obs_shape)
 
-    def __take_action__(self, obs, mask):
+    def choose_action(self, obs, mask):
         return get_random_action(mask=mask)
 
     def __getType__(self):
@@ -66,7 +76,7 @@ class PassiveAgent(Agent):
         self.pass_chance = pass_chance
         super().__init__(agent_id, behavior_name, action_shape, obs_shape)
 
-    def __take_action__(self, obs, mask):
+    def choose_action(self, obs, mask):
         if not mask[0] and random.random() < self.pass_chance:
             return 0
 
@@ -83,7 +93,7 @@ class PassiveAgent(Agent):
 
 class GreedyAgent(Agent):
 
-    def __take_action__(self, obs, mask):
+    def choose_action(self, obs, mask):
         possible_actions = []
         for i in range(len(mask)):
             value = mask[i]
@@ -119,7 +129,7 @@ class StreetBuilderAgent(Agent):
         self.villages_build = 0
         super().__init__(agent_id, behavior_name, action_shape, obs_shape)
 
-    def __take_action__(self, obs, mask):
+    def choose_action(self, obs, mask):
 
         # If we cannot pass, we are in the initial phase.
         # Choose the best brick and wood placements

@@ -13,6 +13,7 @@ public class UIController : MonoBehaviour
     [SerializeField] private Text diceRollText = null;
     [SerializeField] private Text stepText = null;
     [SerializeField] private GameObject LogContainer = null;
+    public int turnCount = 0;
 
     private void Awake()
     {
@@ -91,7 +92,7 @@ public class UIController : MonoBehaviour
 
     public void UpdateStepText()
     {
-        stepText.text = "E " + (Academy.Instance.EpisodeCount - 1)+ " S " + Academy.Instance.StepCount;
+        stepText.text = "E " + (Academy.Instance.EpisodeCount - 1)+ " S " + Academy.Instance.StepCount + " T " + turnCount;
     }
 
     public void ShowUI(bool value)

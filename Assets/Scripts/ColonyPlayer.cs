@@ -5,6 +5,7 @@ using Unity.MLAgents;
 using Unity.MLAgents.Sensors;
 using System.Linq;
 using System;
+using Unity.MLAgents.Policies;
 
 public class ColonyPlayer : Agent
 {
@@ -27,6 +28,8 @@ public class ColonyPlayer : Agent
     //private bool largestArmy = false;
     public Trader trader = null;
     public HashSet<int> harbors = new HashSet<int>();
+
+    private HashSet<int> prevMask = new HashSet<int>();
 
     public int ID { get { return playerID; } }
     public float Points { get { return GetCumulativeReward(); } }
@@ -123,7 +126,8 @@ public class ColonyPlayer : Agent
 
         if(Buildings.Count < 4)
         {
-            List<int> actionMask = InitialActionMask();
+            HashSet<int> actionMask = InitialActionMask();
+            if(actionMask.Count == 163) { availableActions.Add(Pass); }
             for (int i = 0; i < 3 * 54 + 1; i++) { if (!actionMask.Contains(i)) { availableActions.Add(i); } }
         }
         else
@@ -158,6 +162,7 @@ public class ColonyPlayer : Agent
         }
 
         int actionNum = Mathf.FloorToInt(vectorAction[0]);
+        if (prevMask.Contains(actionNum) || prevMask.Count == 163) { actionNum = Pass; }
 
         // If we pass...
         if (actionNum == Pass)
@@ -198,16 +203,21 @@ public class ColonyPlayer : Agent
 
     public override void CollectDiscreteActionMasks(DiscreteActionMasker actionMasker)
     {
-        if(Buildings.Count < 4) { actionMasker.SetMask(0, InitialActionMask()); }
+        if (Buildings.Count < 4) 
+        {
+            prevMask = InitialActionMask();
+            actionMasker.SetMask(0, prevMask); 
+        }
         else
         {
-            actionMasker.SetMask(0, NormalActionMask());
+            prevMask = NormalActionMask();
+            actionMasker.SetMask(0, prevMask);
         }
     }
 
-    private List<int> InitialActionMask()
+    private HashSet<int> InitialActionMask()
     {
-        List<int> actionMask = new List<int> { Pass }; //,BuyDevelopmentCard, PlayKnightCard };
+        HashSet<int> actionMask = new HashSet<int> { Pass }; //,BuyDevelopmentCard, PlayKnightCard };
         for (int i = 0; i < BoardController.ntgpIndexes.Count; i++)
         {
             int ntgpIndex = BoardController.ntgpIndexes[i];
@@ -226,6 +236,10 @@ public class ColonyPlayer : Agent
                 else if (Buildings.Count % 2 == 1 && BoardController.singleton.connections[ntgp.index, LastBuilding.Position.index] != 1) { actionMask.Add(actionNumber); }
             }
         }
+        if(actionMask.Count >= 163)
+        {
+            throw new Exception("All actions are masked in the initial masking phase!");
+        }
         return actionMask;
     }
 
@@ -243,6 +257,8 @@ public class ColonyPlayer : Agent
                 else if (!BoardController.singleton.PossibleBuildingSite(ntgp, this, buildingType)) { result.Add(actionNumber); }
             }
         }
+
+        if (result.Contains(Pass)) { result.Remove(Pass); } // We can always pass!
 
         return result;
     }

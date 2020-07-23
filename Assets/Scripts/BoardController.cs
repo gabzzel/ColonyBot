@@ -47,6 +47,7 @@ public class BoardController : MonoBehaviour
     public bool fixDesertToMiddle = false;
     readonly int[] standardResources = new int[] { Wool, Lumber, Brick, Grain, Brick, Grain, Ore, Lumber, Grain, Desert, Lumber, Brick, Wool, Ore, Ore, Grain, Lumber, Wool, Wool };
     readonly List<int> standardNumbers = new List<int> { 9, 3, 2, 3, 8, 4, 5, 5, 6, 0, 6, 10, 12, 11, 8, 9, 11, 4, 10 };
+    //readonly List<int> standardHarbors = new List<int> { }
 
     /* Properties */
     public TileGridPoint RobberLocation
@@ -540,12 +541,25 @@ public class BoardController : MonoBehaviour
 
         if (!free && !gp.HasStreetConnectionForPlayer(player.ID)) { return false; } //
 
+        int notOurs = 0;
         foreach (int neighbourIndex in gp.connectedNTGPs)
         {
             NonTileGridPoint neighbour = (NonTileGridPoint)allGridPoints[neighbourIndex];
             //if (neighbour.Building != null || !free && !neighbour.HasStreetConnectionForPlayer(player.ID)) { return false; }
             if (neighbour.Building != null) { return false; }
+
+            // We check for every neighbour if the NTGP connection is occupied by someone other than the current player.
+            // If that is so, we remember that value. If we come across this value again, we cannot build here, as we would be interupting someones street
+            int value = connections[gp.index, neighbourIndex];
+            if(value != player.ID + 2 && value > 1)
+            {
+                if(notOurs == 0) { notOurs = value; }
+                else if(notOurs == value) { notOurs = int.MaxValue; }
+            }
         }
+
+        // If 2 or 3 NTGP connections with this gridpoint are occupied by a street of someone else, we
+        if(notOurs == int.MaxValue) { return false; }
 
         return true;
     }

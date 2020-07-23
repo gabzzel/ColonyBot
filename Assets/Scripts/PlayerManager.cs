@@ -89,6 +89,8 @@ public class PlayerManager : MonoBehaviour
         {
             GameController.singleton.PerformDiceRoll();
         }
+
+        UIController.singleton.turnCount++;
     }
 
     public void SetAllPlayersDone() { foreach (ColonyPlayer cp in players) { cp.EndEpisode(); } }
