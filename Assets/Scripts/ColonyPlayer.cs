@@ -206,7 +206,7 @@ public class ColonyPlayer : Agent
         if (Buildings.Count < 4) 
         {
             prevMask = InitialActionMask();
-            actionMasker.SetMask(0, prevMask); 
+            actionMasker.SetMask(0, prevMask);
         }
         else
         {
@@ -217,6 +217,18 @@ public class ColonyPlayer : Agent
 
     private HashSet<int> InitialActionMask()
     {
+        // If we are in the inital phase and have build 2 buildings or 4 buildings
+        if((Buildings.Count == 2 || Buildings.Count == 4) && turnPhase == TurnPhase.Build)
+        {
+            HashSet<int> mask = new HashSet<int>();
+            for (int i = 1; i < 163; i++)
+            {
+                mask.Add(i);
+            }
+            return mask;
+        }
+
+
         HashSet<int> actionMask = new HashSet<int> { Pass }; //,BuyDevelopmentCard, PlayKnightCard };
         for (int i = 0; i < BoardController.ntgpIndexes.Count; i++)
         {

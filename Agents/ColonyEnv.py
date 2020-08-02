@@ -7,7 +7,7 @@ from mlagents_envs.side_channel.engine_configuration_channel import EngineConfig
 from mlagents_envs.side_channel.environment_parameters_channel import EnvironmentParametersChannel
 import tensorflow as tf
 
-import ScriptedAgents
+import Agents
 import colonybot
 
 env_name = "C:\\Users\\Gabi\\Documents\\GitHub\\ColonyBot\\Builds\\ColonyBot.exe"
@@ -33,31 +33,10 @@ AGENTS = [None, None, None, None]
 for i in range(4):
     current_type = AGENT_TYPES[i]
 
-    if current_type == "?":
-        current_type = random.choice(ScriptedAgents.all_agent_types)
     if current_type == "R":
-        AGENTS[i] = ScriptedAgents.RandomAgent(agent_id=i,
-                                               behavior_name=BHV_NAME_1,
-                                               action_shape=ACT_SHAPE_1,
-                                               obs_shape=OBS_SHAPE_1)
-    elif current_type == "P":
-        AGENTS[i] = ScriptedAgents.PassiveAgent(agent_id=i,
-                                                behavior_name=BHV_NAME_1,
-                                                action_shape=ACT_SHAPE_1,
-                                                obs_shape=OBS_SHAPE_1)
-    elif current_type == "G":
-        AGENTS[i] = ScriptedAgents.GreedyAgent(agent_id=i,
-                                               behavior_name=BHV_NAME_1,
-                                               action_shape=ACT_SHAPE_1,
-                                               obs_shape=OBS_SHAPE_1)
-    elif current_type == "S":
-        AGENTS[i] = ScriptedAgents.StreetBuilderAgent(agent_id=i,
-                                                      behavior_name=BHV_NAME_1,
-                                                      action_shape=ACT_SHAPE_1,
-                                                      obs_shape=OBS_SHAPE_1)
+        AGENTS[i] = Agents.RandomAgent(agent_id=i)
     elif current_type == "AC":
-        AGENTS[i] = colonybot.ActorCritic(agent_id=i, behavior_name=BHV_NAME_1, action_shape=ACT_SHAPE_1,
-                                          obs_shape=OBS_SHAPE_1, alpha=0.0001, beta=0.0001)
+        AGENTS[i] = Agents.ActorCritic(agent_id=i, alpha=0.0001, beta=0.0001)
 
 MAX_STEPS = 2000
 MAX_EPISODES = 1000
@@ -85,8 +64,7 @@ for episode in range(MAX_EPISODES):
         env.step()
         steps += 1
 
-        decision_steps, terminal_steps = env.get_steps(
-            BHV_NAME_1)  # The decision steps (the agents info which need a decision this step)
+        decision_steps, terminal_steps = env.get_steps(BHV_NAME_1)  # The decision steps (the agents info which need a decision this step)
 
         # The Game has ended because one of the agents won
         if len(terminal_steps.agent_id) > 0:
@@ -95,13 +73,7 @@ for episode in range(MAX_EPISODES):
                 terminal_step = terminal_steps[agent_id]  # The terminal step information of this agent
                 current_agent = AGENTS[agent_id]
                 current_agent.reward += terminal_step.reward  # Give their rewards
-
-                if AGENT_TYPES[agent_id] == "AC":
-                    current_agent.remember(state=current_agent.prev_observation, action=current_agent.prev_action,
-                                           reward=terminal_step.reward,
-                                           state_=terminal_step.obs[0],
-                                           done=True)
-
+                current_agent.remember(state=terminal_step.obs[0], action=0, reward=terminal_step.reward, done=True)
         else:
             done = False
             decision_agent_id = decision_steps.agent_id[0]  # There can only be 1 agent that wants a decision
@@ -111,26 +83,18 @@ for episode in range(MAX_EPISODES):
             observation = decision_step.obs[0]
             mask = decision_step.action_mask[0]
             action = current_agent.choose_action(obs=observation, mask=mask)
-            reward = decision_step.reward - 0.1 * current_agent.prev_mask[current_agent.prev_action]
+            if len(current_agent.actions) > 0:
+                reward = decision_step.reward - 0.1 * current_agent.prev_mask[current_agent.actions[-1]]
+            else:
+                reward = decision_step.reward
             # print(reward)
             current_agent.reward += reward
 
-            if current_agent.__getType__() is "ActorCritic":
-                #print(current_agent.prev_mask[current_agent.prev_action], reward)
-                current_agent.remember(state=current_agent.prev_observation, action=current_agent.prev_action,
-                                       reward=reward, state_=observation,
-                                       done=False)
-
-            if isinstance(action, list):
-                current_agent.prev_action = action[0]
-            else:
-                current_agent.prev_action = action
-            current_agent.prev_observation = observation
-            current_agent.prev_reward = reward
+            current_agent.remember(state=observation, action=action, reward=reward, done=False)
             current_agent.prev_mask = mask
 
             if mask[action]:
-                action = ScriptedAgents.get_random_action(mask=mask)
+                action = Agents.get_random_action(mask=mask)
             # Tell the environment which action our agent wants to take
             action = np.array(action, ndmin=1)
             env.set_action_for_agent(behavior_name=BHV_NAME_1, agent_id=decision_agent_id, action=action)

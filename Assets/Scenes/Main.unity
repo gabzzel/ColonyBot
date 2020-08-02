@@ -1010,8 +1010,10 @@ MonoBehaviour:
   pointsToWin: 9
   numberOfPlayers: 4
   showUI: 1
-  stepTime: 0.01
+  stepTime: 1
   bankTradeOnly: 1
+  winReward: 10
+  loseReward: -10
   villagePrefab: {fileID: 8832107849633449914, guid: 15c6ade5718c46f4684c64c38017a4b0,
     type: 3}
   cityPrefab: {fileID: 5336831520871488642, guid: d630e75f799761e49b101b2c84a9c4f7,
@@ -6886,6 +6888,7 @@ MonoBehaviour:
   diceRollText: {fileID: 1935875021}
   stepText: {fileID: 1341720186}
   LogContainer: {fileID: 513483672}
+  turnCount: 0
 --- !u!1 &1866504457
 GameObject:
   m_ObjectHideFlags: 0

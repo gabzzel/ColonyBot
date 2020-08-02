@@ -46,7 +46,7 @@ class ActorCritic(Agent):
             log_lik = y_true * K.log(out)
             return K.sum(-log_lik * delta)
 
-        actor = Model(inputs=[input], delta, outputs=[probs])
+        actor = Model(inputs=[input], outputs=[probs])
         actor.compile(optimizer=Adam(lr=self.alpha), loss='mean_squared_error')
         critic = Model(inputs=[input], outputs=[values])
         critic.compile(optimizer=Adam(lr=self.beta), loss='mean_squared_error')

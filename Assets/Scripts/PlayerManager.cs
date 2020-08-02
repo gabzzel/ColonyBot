@@ -48,7 +48,7 @@ public class PlayerManager : MonoBehaviour
         {
             int value = (i + r) % numberOfPlayers;
             firstHalf.Add(value);
-            firstHalf.Add(value);
+            // firstHalf.Add(value);
         }
         List<int> secondHalf = new List<int>(firstHalf);
         secondHalf.Reverse();
@@ -70,18 +70,27 @@ public class PlayerManager : MonoBehaviour
         else { Notifier.singleton.Notify(CurrentPlayer.name + " action requested, Academy Instance not Initialized."); }
 
         // If we are in the initial queue
+        /*
         if (queue.Count > 0)
         {
             currentPlayer = queue.Dequeue(); // Update the current player
         }
+        */
     }
 
     public void NotifyOfPass()
     {
+        // If we are not in the initial phase, just get the next player
         if(queue.Count == 0)
         {
             currentPlayer = NextPlayerNumber;
-        }       
+        }
+        // Else, get the next player in the initial player queue
+        else
+        {
+            currentPlayer = queue.Dequeue();
+        }
+
 
         Notifier.singleton.Notify(CurrentPlayer.name + "'s turn!");
 
