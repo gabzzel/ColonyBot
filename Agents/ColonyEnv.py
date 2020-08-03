@@ -40,7 +40,7 @@ for i in range(4):
         AGENTS[i] = Agents.ActorCritic(agent_id=i, alpha=0.0001, beta=0.0001)
 
 MAX_STEPS = 2000
-MAX_EPISODES = 1000
+MAX_EPISODES = 10000
 steps = 0
 
 #tf.config.experimental_run_functions_eagerly(True)
@@ -115,5 +115,6 @@ for episode in range(MAX_EPISODES):
                  + str(AGENTS[2].reward)
     log.write(log_string + "\n")
     log.close()
+    agent.save()
 
 env.close()

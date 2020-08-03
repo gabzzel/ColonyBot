@@ -3,6 +3,7 @@ from keras.models import Model
 from keras.layers import Dense, Input
 from keras.optimizers import Adam
 import keras.backend as K
+from tensorflow.python.keras.models import load_model
 
 
 def get_random_action(mask):
@@ -57,7 +58,7 @@ class Agent:
                 raise Exception("The amount of states and new_states should be the same after we are done!")
 
         # If we pass to end our turn; We have a deficit we need to fill!
-        elif action == 0 and self.actions[-2] != 0:
+        elif len(self.actions) > 1 and action == 0 and self.actions[-2] != 0:
             self.new_states.append(state)  # Add the current observation so it corresponds with the previous step
             self.new_states.append(state)  # Fill the deficit
             self.rewards.append(reward)  # Add the current reward that corresponds to the previous step
@@ -68,7 +69,7 @@ class Agent:
                 raise Exception("The amount of states and new_states should be the same after passing!")
 
         # If we pass and it's the only action we take; We don't have a deficit
-        elif action == 0 and self.actions[-2] == 0:
+        elif len(self.actions) > 1 and action == 0 and self.actions[-2] == 0:
             self.new_states.append(state)
             self.rewards.append(reward)
             self.dones.append(False)
@@ -178,6 +179,14 @@ class ActorCritic(Agent):
         action = np.random.choice(self.action_space, p=probabilities)
         return action
 
+    def load(self):
+        self.actor = load_model('actor', compile=False)
+        self.critic = load_model('critic', compile=False)
+
+    def save(self):
+        self.actor.save('actor.h5')
+        self.critic.save('critic.h5')
+
     def learn(self):
         # reshape memory to appropriate shape for training
         states = np.vstack(self.states)
@@ -191,6 +200,6 @@ class ActorCritic(Agent):
         # Compute advantages
         advantages = discounted_r - values
         # training Actor and Critic networks
-        ah = self.actor.fit(states, actions, sample_weight=advantages, verbose=1)
-        ch = self.critic.fit(states, discounted_r, verbose=1)
+        ah = self.actor.fit(states, actions, sample_weight=advantages, verbose=0)
+        ch = self.critic.fit(states, discounted_r, verbose=0)
         return ah, ch
