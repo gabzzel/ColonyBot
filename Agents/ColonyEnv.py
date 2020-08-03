@@ -20,6 +20,7 @@ side_channel.set_float_parameter("step_time", 0.001)
 side_channel.set_float_parameter("show_ui", 0)
 side_channel.set_float_parameter("standard_board", 1)
 side_channel.set_float_parameter("points_to_win", points_to_win)
+side_channel.set_float_parameter("step_multiplier", 2)
 engine_configuration_channel.set_configuration_parameters(time_scale=1.0, height=1000, width=1000)
 env = UnityEnvironment(base_port=5006, file_name=env_name, side_channels=[side_channel, engine_configuration_channel])
 
@@ -42,7 +43,7 @@ MAX_STEPS = 2000
 MAX_EPISODES = 1000
 steps = 0
 
-tf.config.experimental_run_functions_eagerly(True)
+#tf.config.experimental_run_functions_eagerly(True)
 ct = time.localtime(time.time())
 log_name = "Log-" + str(ct.tm_mday) + "-" + str(ct.tm_mon) + "-" + str(ct.tm_year) + " " + str(ct.tm_hour) + "-" + \
            str(ct.tm_min) + "-" + str(ct.tm_sec) + ".txt"

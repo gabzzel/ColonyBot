@@ -460,7 +460,7 @@ ScriptsOnlyBuild:
     className: SpriteSkinEntity
   - hash:
       serializedVersion: 2
-      Hash: 9ba9e33e8f8fd8077f0a4483577aaf23
+      Hash: 88e577ac47755b5abb19db1a43065ded
     assemblyName: Assembly-CSharp.dll
     namespaceName: 
     className: GameController

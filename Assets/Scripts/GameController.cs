@@ -12,6 +12,7 @@ public class GameController : MonoBehaviour
     [Range(6, 12, order = 1)] public int pointsToWin = 12;
     [Range(1, 4, order = 1)] public int numberOfPlayers = 3;
     public bool showUI = true;
+    public int stepMultiplier = 2;
     public float stepTime = 1f;
     private float stepTimer = 0f;
     public bool bankTradeOnly = true;
@@ -76,6 +77,7 @@ public class GameController : MonoBehaviour
         showUI = ep.GetWithDefault("show_ui", 1f) == 1f;
         winReward = ep.GetWithDefault("win_reward", 10f);
         loseReward = ep.GetWithDefault("loss_reward", -10f);
+        stepMultiplier = Mathf.FloorToInt(ep.GetWithDefault("step_multiplier", 2f));
     }
 
     public void NewGame()
@@ -112,7 +114,11 @@ public class GameController : MonoBehaviour
             stepTimer += Time.fixedDeltaTime;
             if (stepTimer >= stepTime)
             {
-                NextStep();
+                for (int i = 0; i < stepMultiplier; i++)
+                {
+                    NextStep();
+                }
+                
                 stepTimer = 0f;
             }
         }

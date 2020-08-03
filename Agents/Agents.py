@@ -42,17 +42,21 @@ class Agent:
 
         if done:
             self.new_states.append(state)  # From the previous step, that was NOT DONE yet
-            self.new_states.append(state)  # Fill the deficit
-            self.rewards.append(int(reward > 0))  # If our finishing reward is bigger than 0 (so we won)
-            # our previous reward must have been 1
-            # Else, we lost and our previous reward was 0
+
+            if len(self.states) > len(self.new_states):
+                self.new_states.append(state)
+
+                # If our finishing reward is bigger than 0 (so we won), our previous reward must have been 1
+                # Else, we lost and our previous reward was 0
+                self.rewards.append(int(reward > 0))
+                self.dones.append(False)  # The previous step we weren't done...
 
             self.rewards.append(reward)  # The winning or losing reward
-            self.dones.append(False)  # The previous step we weren't done...
             self.dones.append(True)  # This step we are!
+            if len(self.states) != len(self.new_states):
+                raise Exception("The amount of states and new_states should be the same after we are done!")
 
-        # If we pass and our previous action wasn't a pass,
-        # our observation will not change and we have no reward and we are not done
+        # If we pass to end our turn; We have a deficit we need to fill!
         elif action == 0 and self.actions[-2] != 0:
             self.new_states.append(state)  # Add the current observation so it corresponds with the previous step
             self.new_states.append(state)  # Fill the deficit
@@ -60,17 +64,24 @@ class Agent:
             self.rewards.append(0)  # If we pass, our current reward is 0
             self.dones.append(False)  # We were not done last step
             self.dones.append(False)  # And we are not done this step, otherwise we would be in the previous statement
+            if len(self.states) != len(self.new_states):
+                raise Exception("The amount of states and new_states should be the same after passing!")
+
+        # If we pass and it's the only action we take; We don't have a deficit
         elif action == 0 and self.actions[-2] == 0:
             self.new_states.append(state)
             self.rewards.append(reward)
             self.dones.append(False)
+            if len(self.states) != len(self.new_states):
+                raise Exception("The amount of states and new_states should be the same after passing!")
 
-        else:
-            # Always make the new_states, done and rewards lists lack one behind
-            if len(self.states) > len(self.new_states) + 1:
-                self.new_states.append(state)  # The current state is the new state of the previous one
-                self.rewards.append(reward)  # The current reward is the result of the previous action
-                self.dones.append(False)  # We are not done, otherwise we would have gotten the first if statement
+        # Always make the new_states, done and rewards lists lack one behind
+        elif len(self.states) > len(self.new_states) + 1:
+            self.new_states.append(state)  # The current state is the new state of the previous one
+            self.rewards.append(reward)  # The current reward is the result of the previous action
+            self.dones.append(False)  # We are not done, otherwise we would have gotten the first if statement
+            if len(self.states) <= len(self.new_states):
+                raise Exception("The amount of states and new_states should be different after taking an action that's not passing!")
 
         i = 0
 
@@ -89,7 +100,7 @@ class Agent:
         return
 
     def getType(self):
-        return "Base Agent class"
+        return "BaseAgent"
 
 
 class RandomAgent(Agent):
@@ -114,7 +125,7 @@ class ActorCritic(Agent):
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
-        self.actor, self.critic, self.policy = self.build_actor_critic_network()
+        self.actor, self.critic = self.build_actor_critic_network()
 
     def build_actor_critic_network(self):
         input = Input(shape=self.obs_shape)
@@ -126,24 +137,31 @@ class ActorCritic(Agent):
         probs = Dense(self.action_shape[0], activation='softmax')(last)
         values = Dense(1, activation='linear')(last)
 
-        def custom_loss(y_true, y_pred):
-            out = K.clip(y_pred, 1e-08, 1 - 1e-8)
-            log_lik = y_true * K.log(out)
-            loss = K.sum(-log_lik * delta)
-            print(loss)
-            return loss
-
         actor = Model(inputs=[input, delta], outputs=[probs])
-        actor.compile(optimizer=Adam(lr=self.alpha), loss=custom_loss)
+        actor.compile(optimizer=Adam(lr=self.alpha), loss='mean_squared_error')
         critic = Model(inputs=[input], outputs=[values])
         critic.compile(optimizer=Adam(lr=self.beta), loss='mean_squared_error')
 
-        policy = Model(inputs=[input], outputs=[probs])
-        return actor, critic, policy
+        return actor, critic
+
+    def discount_rewards(self, reward):
+        # Compute the gamma-discounted rewards over an episode
+        self.gamma = 0.99  # discount rate
+        running_add = 0
+        discounted_r = np.zeros_like(reward)
+        for i in reversed(range(0, len(reward))):
+            if reward[i] != 0:  # reset the sum, since this was a game boundary (pong specific!)
+                running_add = 0
+            running_add = running_add * self.gamma + reward[i]
+            discounted_r[i] = running_add
+
+        discounted_r -= np.mean(discounted_r)  # normalizing the result
+        discounted_r /= np.std(discounted_r)  # divide by standard deviation
+        return discounted_r
 
     def choose_action(self, obs, mask) -> np.array:
         state = obs[np.newaxis, :]
-        probabilities = self.policy.predict(state)[0]
+        probabilities = self.actor.predict(state)[0]
         # for i in range(len(probabilities)):
         #    if mask[i]:
         #        probabilities[i] = 0.0
@@ -161,27 +179,18 @@ class ActorCritic(Agent):
         return action
 
     def learn(self):
-        actor_inputs = []
-        actions_set = []
-        critic_input = []
-        targets = []
+        # reshape memory to appropriate shape for training
+        states = np.vstack(self.states)
+        actions = np.vstack(self.actions)
 
-        for i in range(len(self.states)):
-            state = np.reshape(a=self.states[i], newshape=(1, 437))
-            new_state = np.reshape(a=self.new_states[i], newshape=(1, 437))
-            critic_value_ = self.critic.predict(new_state)
-            critic_value = self.critic.predict(state)
-            target = self.rewards[i] + self.gamma * critic_value_ * (1 - int(self.dones[i]))
-            delta = target - critic_value
-            actor_inputs.append([state, delta])  # Actor Input
+        # Compute discounted rewards
+        discounted_r = self.discount_rewards(self.rewards)
 
-            actions = np.zeros([1, self.action_space[0]])
-            actions[np.arange(1), self.actions[i]] = 1.0
-            actions_set.append(actions)  # Actor output
-
-            critic_input.append(state)
-            targets.append(target)
-
-        ah = self.actor.fit(actor_inputs, actions_set, verbose=0)
-        ch = self.critic.fit(critic_input, targets, verbose=0)
+        # Get Critic network predictions
+        values = self.critic.predict(states)[:, 0]
+        # Compute advantages
+        advantages = discounted_r - values
+        # training Actor and Critic networks
+        ah = self.actor.fit(states, actions, sample_weight=advantages, verbose=1)
+        ch = self.critic.fit(states, discounted_r, verbose=1)
         return ah, ch
