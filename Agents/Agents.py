@@ -138,9 +138,9 @@ class ActorCritic(Agent):
         probs = Dense(self.action_shape[0], activation='softmax')(last)
         values = Dense(1, activation='linear')(last)
 
-        actor = Model(inputs=[input, delta], outputs=[probs])
+        actor = Model(inputs=input, outputs=probs)
         actor.compile(optimizer=Adam(lr=self.alpha), loss='mean_squared_error')
-        critic = Model(inputs=[input], outputs=[values])
+        critic = Model(inputs=input, outputs=values)
         critic.compile(optimizer=Adam(lr=self.beta), loss='mean_squared_error')
 
         return actor, critic

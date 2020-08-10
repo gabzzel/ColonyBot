@@ -20,7 +20,7 @@ side_channel.set_float_parameter("step_time", 0.001)
 side_channel.set_float_parameter("show_ui", 0)
 side_channel.set_float_parameter("standard_board", 1)
 side_channel.set_float_parameter("points_to_win", points_to_win)
-side_channel.set_float_parameter("step_multiplier", 2)
+side_channel.set_float_parameter("step_multiplier", 10)
 engine_configuration_channel.set_configuration_parameters(time_scale=1.0, height=1000, width=1000)
 env = UnityEnvironment(base_port=5006, file_name=env_name, side_channels=[side_channel, engine_configuration_channel])
 
@@ -37,7 +37,7 @@ for i in range(4):
     if current_type == "R":
         AGENTS[i] = Agents.RandomAgent(agent_id=i)
     elif current_type == "AC":
-        AGENTS[i] = Agents.ActorCritic(agent_id=i, alpha=0.0001, beta=0.0001)
+        AGENTS[i] = Agents.ActorCritic(agent_id=i, alpha=0.00001, beta=0.00001)
 
 MAX_STEPS = 2000
 MAX_EPISODES = 10000
@@ -48,7 +48,7 @@ ct = time.localtime(time.time())
 log_name = "Log-" + str(ct.tm_mday) + "-" + str(ct.tm_mon) + "-" + str(ct.tm_year) + " " + str(ct.tm_hour) + "-" + \
            str(ct.tm_min) + "-" + str(ct.tm_sec) + ".txt"
 log = open(file=log_name, mode="w+")
-log.write("Episode,Steps,ActorLoss,CriticLoss,AgentAC_reward,Agent0_reward,Agent1_reward,Agent2_reward\n")
+log.write("Time,Episode,Steps,ActorLoss,CriticLoss,AgentAC_reward,Agent0_reward,Agent1_reward,Agent2_reward\n")
 log.close()
 
 for episode in range(MAX_EPISODES):
@@ -91,11 +91,12 @@ for episode in range(MAX_EPISODES):
             # print(reward)
             current_agent.reward += reward
 
+            if mask[action]:
+                action = Agents.get_random_action(mask=mask)
+
             current_agent.remember(state=observation, action=action, reward=reward, done=False)
             current_agent.prev_mask = mask
 
-            if mask[action]:
-                action = Agents.get_random_action(mask=mask)
             # Tell the environment which action our agent wants to take
             action = np.array(action, ndmin=1)
             env.set_action_for_agent(behavior_name=BHV_NAME_1, agent_id=decision_agent_id, action=action)
@@ -105,7 +106,8 @@ for episode in range(MAX_EPISODES):
     ah, ch = agent.learn()
     actor_loss = ah.history['loss'][0]
     critic_loss = ch.history['loss'][0]
-    log_string = str(episode) + "," \
+    log_string = str(time.time()) + "," \
+                 + str(episode) + "," \
                  + str(steps) + "," \
                  + str(actor_loss) + "," \
                  + str(critic_loss) + "," \
