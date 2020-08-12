@@ -65,56 +65,54 @@ ScriptsOnlyBuild:
       Script: {instanceID: 0}
     - Class: 104
       Script: {instanceID: 0}
-    - Class: 109
-      Script: {instanceID: 0}
     - Class: 114
-      Script: {instanceID: 11178}
+      Script: {instanceID: 11176}
     - Class: 114
-      Script: {instanceID: 11180}
+      Script: {instanceID: 11232}
     - Class: 114
-      Script: {instanceID: 11206}
+      Script: {instanceID: 11234}
     - Class: 114
-      Script: {instanceID: 11208}
+      Script: {instanceID: 11410}
     - Class: 114
-      Script: {instanceID: 11384}
+      Script: {instanceID: 11560}
     - Class: 114
-      Script: {instanceID: 11534}
+      Script: {instanceID: 11612}
     - Class: 114
-      Script: {instanceID: 11586}
+      Script: {instanceID: 11672}
     - Class: 114
-      Script: {instanceID: 11646}
+      Script: {instanceID: 11840}
     - Class: 114
-      Script: {instanceID: 11812}
+      Script: {instanceID: 12146}
     - Class: 114
-      Script: {instanceID: 12118}
+      Script: {instanceID: 12176}
     - Class: 114
-      Script: {instanceID: 12148}
+      Script: {instanceID: 12370}
     - Class: 114
-      Script: {instanceID: 12342}
+      Script: {instanceID: 12748}
     - Class: 114
-      Script: {instanceID: 12720}
+      Script: {instanceID: 12792}
     - Class: 114
-      Script: {instanceID: 12764}
+      Script: {instanceID: 12880}
     - Class: 114
-      Script: {instanceID: 12852}
+      Script: {instanceID: 12922}
     - Class: 114
-      Script: {instanceID: 12894}
+      Script: {instanceID: 13096}
     - Class: 114
-      Script: {instanceID: 13068}
+      Script: {instanceID: 13226}
     - Class: 114
-      Script: {instanceID: 13198}
+      Script: {instanceID: 13390}
     - Class: 114
-      Script: {instanceID: 13594}
+      Script: {instanceID: 13624}
     - Class: 114
-      Script: {instanceID: 13788}
+      Script: {instanceID: 13818}
     - Class: 114
-      Script: {instanceID: 14092}
+      Script: {instanceID: 14126}
     - Class: 114
-      Script: {instanceID: 14292}
+      Script: {instanceID: 14326}
     - Class: 114
-      Script: {instanceID: 14802}
+      Script: {instanceID: 14836}
     - Class: 114
-      Script: {instanceID: 14870}
+      Script: {instanceID: 14904}
     - Class: 115
       Script: {instanceID: 0}
     - Class: 128
@@ -140,12 +138,6 @@ ScriptsOnlyBuild:
     assemblyName: UnityEngine.UI.dll
     namespaceName: UnityEngine.UI
     className: Text
-  - hash:
-      serializedVersion: 2
-      Hash: 5ad4aa237d47ac2bab17bacb672edf7a
-    assemblyName: UnityEngine.UI.dll
-    namespaceName: UnityEngine.UI
-    className: VerticalLayoutGroup
   - hash:
       serializedVersion: 2
       Hash: 07ec0b52c0d948307b542345a5d7c356
@@ -238,7 +230,7 @@ ScriptsOnlyBuild:
     className: TestResultRendererCallback
   - hash:
       serializedVersion: 2
-      Hash: 896f4ddc5cbd3f6fa8a70c332cddb47a
+      Hash: 1d845b2535654b2525956159b2714d86
     assemblyName: Unity.2D.SpriteShape.Runtime.dll
     namespaceName: UnityEngine.U2D
     className: SpriteShapeController
@@ -272,6 +264,12 @@ ScriptsOnlyBuild:
     assemblyName: Unity.ML-Agents.dll
     namespaceName: Unity.MLAgents.Sensors
     className: RayPerceptionSensorComponent2D
+  - hash:
+      serializedVersion: 2
+      Hash: 523ce309f50d9eee6a8fc0e2f86c9c97
+    assemblyName: Unity.2D.SpriteShape.Runtime.dll
+    namespaceName: 
+    className: SpriteShapeGeometryCache
   - hash:
       serializedVersion: 2
       Hash: 8aa3d6ccbcb54ee8db6c1229854adaaa
@@ -518,6 +516,12 @@ ScriptsOnlyBuild:
     assemblyName: Unity.Barracuda.dll
     namespaceName: Unity.Barracuda
     className: NNModelData
+  - hash:
+      serializedVersion: 2
+      Hash: 5ad4aa237d47ac2bab17bacb672edf7a
+    assemblyName: UnityEngine.UI.dll
+    namespaceName: UnityEngine.UI
+    className: VerticalLayoutGroup
   - hash:
       serializedVersion: 2
       Hash: 71b711096c6c32621c1d4c02310898b7

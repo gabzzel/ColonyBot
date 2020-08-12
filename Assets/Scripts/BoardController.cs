@@ -44,6 +44,7 @@ public class BoardController : MonoBehaviour
     public bool allowHighChanceNeighbours = false;
     public bool drawGridPointIndicators = true;
     public bool drawHarbors = true;
+    public bool randomHarbors = false;
     public bool fixDesertToMiddle = false;
     readonly int[] standardResources = new int[] { Wool, Lumber, Brick, Grain, Brick, Grain, Ore, Lumber, Grain, Desert, Lumber, Brick, Wool, Ore, Ore, Grain, Lumber, Wool, Wool };
     readonly List<int> standardNumbers = new List<int> { 9, 3, 2, 3, 8, 4, 5, 5, 6, 0, 6, 10, 12, 11, 8, 9, 11, 4, 10 };

@@ -103,7 +103,12 @@ public class ColonyPlayer : Agent
         {
             // 1. If we have a building : 1, if someone else has a building : -1, otherwise 0
             if(ntgp.Building == null) { sensor.AddObservation(0); }
-            else { sensor.AddObservation(ntgp.Building.Owner == this ? 1 : -1); }
+            else 
+            {
+                int value = ntgp.Building.Owner == this ? 1 : -1;
+                if (ntgp.Building.Type == City) { value *= 2; }
+                sensor.AddObservation(value); 
+            }
 
             // 2. If the gridpoint is also a harbor
             sensor.AddObservation(ntgp.harbor != NoHarbor);

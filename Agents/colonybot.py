@@ -34,10 +34,10 @@ class ActorCritic(Agent):
     def build_actor_critic_network(self):
         input = Input(shape=self.obs_shape)
         delta = Input([1])
-        dense1 = Dense(437, activation='relu')(input)
-        dense2 = Dense(300, activation='relu')(dense1)
-        dense3 = Dense(300, activation='relu')(dense2)
-        last = Dense(163, activation='relu')(dense3)
+        dense1 = Dense(125, activation='relu')(input)
+        #dense2 = Dense(150, activation='relu')(dense1)
+        #dense3 = Dense(300, activation='relu')(dense2)
+        last = Dense(75, activation='relu')(dense1)
         probs = Dense(self.action_shape[0], activation='softmax')(last)
         values = Dense(1, activation='linear')(last)
 
@@ -46,7 +46,7 @@ class ActorCritic(Agent):
             log_lik = y_true * K.log(out)
             return K.sum(-log_lik * delta)
 
-        actor = Model(inputs=[input], outputs=[probs])
+        actor = Model(inputs=[input, delta], outputs=[probs])
         actor.compile(optimizer=Adam(lr=self.alpha), loss='mean_squared_error')
         critic = Model(inputs=[input], outputs=[values])
         critic.compile(optimizer=Adam(lr=self.beta), loss='mean_squared_error')
@@ -102,8 +102,10 @@ class ActorCritic(Agent):
         targets = []
 
         for state, action, reward, state_, done in self.memory:
-            state_ = np.reshape(a=state_, newshape=(1, 437))
-            state = np.reshape(a=state, newshape=(1, 437))
+            #state_ = np.reshape(a=state_[np.newaxis, :], newshape=(1, 123))
+            #state = np.reshape(a=state, newshape=(1, 123))
+            state = state[np.newaxis, :]
+            state_ = state_[np.newaxis, :]
             critic_value_ = self.critic.predict(state_)
             critic_value = self.critic.predict(state)
             target = reward + self.gamma * critic_value_ * (1 - int(done))
@@ -117,9 +119,9 @@ class ActorCritic(Agent):
             critic_input.append(state)
             targets.append(target)
 
-        ah = self.actor.fit(actor_inputs, actions_set, verbose=0)
-        ch = self.critic.fit(critic_input, targets, verbose=0)
+        ah = self.actor.fit(actor_inputs, actions_set, verbose=1)
+        ch = self.critic.fit(critic_input, targets, verbose=1)
         return ah, ch
 
-    def __getType__(self):
+    def getType(self):
         return "ActorCritic"
