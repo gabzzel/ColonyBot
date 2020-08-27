@@ -3,7 +3,10 @@ import random
 import time
 import numpy as np
 
+import colonybot
+import ScriptedAgents
 import Agents
+import tensorflow as tf
 
 # Resource Types
 LUMBER = 0
@@ -12,13 +15,22 @@ GRAIN = 2
 DESERT = 3
 
 action_shape = (49,)
-obs_shape = (123,)
+obs_shape = (147,)
+
+tf.config.threading.set_inter_op_parallelism_threads(4)
+tf.config.threading.set_intra_op_parallelism_threads(4)
 
 # AGENTS = [colonybot.ActorCritic(agent_id=1, action_shape=action_shape, obs_shape=obs_shape, behavior_name="", alpha=0.0001, beta=0.0001),
 #          ScriptedAgents.RandomAgent(agent_id=2, action_shape=action_shape, obs_shape=obs_shape, behavior_name="")]
-AGENTS = [Agents.ActorCritic(agent_id=1, action_shape=action_shape, obs_shape=obs_shape),
-          Agents.RandomAgent(agent_id=2, action_shape=action_shape, obs_shape=obs_shape)]
+AGENTS = [Agents.ActorCritic(agent_id=0, action_shape=action_shape, obs_shape=obs_shape, alpha=0.001, beta=0.001),
+          Agents.RandomAgent(agent_id=1, action_shape=action_shape, obs_shape=obs_shape)]
 
+
+def SlidingAverage1000(x : list):
+    if len(x) < 1000:
+        return sum(x) / len(x)
+    else:
+        return sum(x[-1000:]) / 1000
 
 class Player:
     def __init__(self, ID: int, agent: Agents.Agent):
@@ -42,9 +54,13 @@ class Player:
         hres = self.resources.index(h)
         lres = self.resources.index(l)
 
-        if h > 3 and l < h:
+        while h > 3 and l < h - 3:
             self.resources[hres] -= 3
             self.resources[lres] += 1
+            h = max(self.resources)
+            l = min(self.resources)
+            hres = self.resources.index(h)
+            lres = self.resources.index(l)
 
     def choose_action(self, obs, mask):
         return self.agent.choose_action(obs=obs, mask=mask)
@@ -73,13 +89,14 @@ class GridPoint:
         for gp_index in self.connected_gridpoints.keys():
             self.connected_gridpoints[gp_index] = 0
 
-    def get_obs(self, player_id):
+    def get_obs(self, player):
         obs = self.resource_values[:]
         if self.building == 0:
-            obs.append(0)
+            obs.append(float(0))
         else:
-            obs.append(1 if self.building == player_id else -1)
-        obs.append(self.robber * -1)
+            obs.append(float(1) if self.building == player.ID else float(-1))
+        obs.append(float(1) if self.index in player.streets else float(0))
+        obs.append(float(int(self.robber) * -1))
         return obs
 
 
@@ -104,11 +121,13 @@ class Tile:
 
 
 class Board:
-    def __init__(self, agent1: Agents.Agent, agent2: Agents.Agent):
+    def __init__(self, agent1: Agents.Agent, agent2: Agents.Agent, winning_reward=10, points_to_win=3, auto_reward_per_step=-0.01, losing_reward=-10):
         self.players = [Player(ID=1, agent=agent1), Player(ID=2, agent=agent2)]
         self.current_player = 0  # The index of the player that's currently in turn
-        self.points_to_win = 3
-        self.winning_reward = 10
+        self.points_to_win = points_to_win
+        self.winning_reward = winning_reward
+        self.losing_reward = losing_reward
+        self.auto_reward_per_step = auto_reward_per_step
         self.tiles = []
         self.gridpoints = []  # A GP is a tuple : (building, connectd_tile_indexes[])
         self.connections = {}  # A 2D array that contains information about the gp-connections
@@ -120,11 +139,11 @@ class Board:
         #              (8, LUMBER, 0.0625), (3, GRAIN, 0.125)]
 
         self.tiles = [Tile(index=0, res=DESERT, number=0, gps=[7, 8, 11, 12, 15, 16]),
-                      Tile(index=1, res=LUMBER, number=4, gps=[0, 1, 3, 4, 7, 8]),
+                      Tile(index=1, res=LUMBER, number=5, gps=[0, 1, 3, 4, 7, 8]),
                       Tile(index=2, res=BRICK, number=2, gps=[4, 5, 8, 9, 12, 13]),
-                      Tile(index=3, res=BRICK, number=7, gps=[12, 13, 16, 17, 20, 21]),
-                      Tile(index=4, res=GRAIN, number=6, gps=[15, 16, 19, 20, 22, 23]),
-                      Tile(index=5, res=LUMBER, number=8, gps=[10, 11, 14, 15, 18, 19]),
+                      Tile(index=3, res=BRICK, number=5, gps=[12, 13, 16, 17, 20, 21]),
+                      Tile(index=4, res=GRAIN, number=3, gps=[15, 16, 19, 20, 22, 23]),
+                      Tile(index=5, res=LUMBER, number=6, gps=[10, 11, 14, 15, 18, 19]),
                       Tile(index=6, res=GRAIN, number=3, gps=[2, 3, 6, 7, 10, 11])]
 
         self.gridpoints = [GridPoint(index=0, tiles=[self.tiles[1]], gps=[1, 3]),
@@ -200,11 +219,12 @@ class Board:
 
     def dice_roll(self):
         """ Roll the dice and distribute the resources """
-        roll = random.randint(1, 4) + random.randint(1, 4)  # Roll a number with 2d4
+        roll = random.randint(1, 3) + random.randint(1, 3)  # Roll a number with 2d4
 
-        if roll == 5:
-            self.place_robber()
-            self.handle_robber()
+        if roll == 4:
+            i = 1
+            #self.place_robber()
+            #self.handle_robber()
         else:
             # Go through all tiles
             for tile in self.tiles:
@@ -248,19 +268,25 @@ class Board:
             for action_number in range(1, 49):
 
                 gi = math.floor((action_number - 1) / 2)
+                # We want to build a village!
                 if (action_number - 1) % 2 == 1:
-                    value = player.resources[0] > 0 \
-                            and player.resources[1] > 0 \
-                            and player.resources[2] > 0 \
-                            and self.eligible_for_village(gridpoint=self.gridpoints[gi], free=False)
-                    mask.append(not value)
+                    if player.resources[0] < 1:
+                        mask.append(True)
+                    elif player.resources[1] < 1:
+                        mask.append(True)
+                    elif player.resources[2] < 1:
+                        mask.append(True)
+                    elif not self.eligible_for_village(gridpoint=self.gridpoints[gi], free=False):
+                        mask.append(True)
+                    else:
+                        mask.append(False)
+                # We want to build a street!
                 else:
-
                     if player.resources[0] < 1 or player.resources[1] < 1:
                         mask.append(True)
-                    elif not self.eligible_for_street(gridpoint=self.gridpoints[gi]):
+                    elif player.street_count >= 10:
                         mask.append(True)
-                    elif player.street_count > 10:
+                    elif not self.eligible_for_street(gridpoint=self.gridpoints[gi]):
                         mask.append(True)
                     else:
                         mask.append(False)
@@ -270,7 +296,7 @@ class Board:
     def get_obs(self, player: Player) -> list:
         obs = player.resources[:]
         for gp in self.gridpoints:
-            obs.extend(gp.get_obs(player_id=player.ID))
+            obs.extend(gp.get_obs(player=player))
         return obs
 
     def eligible_for_village(self, gridpoint: GridPoint, free: bool) -> bool:
@@ -313,9 +339,10 @@ class Board:
         mask = self.get_mask(player=current_player)
         obs = np.array(self.get_obs(player=current_player))
         action = current_player.choose_action(obs=obs, mask=mask)
-        reward = 0
+        reward = self.auto_reward_per_step
         if mask[action]:
-            reward -= 0.025
+            if isinstance(current_player.agent, Agents.RandomAgent) or isinstance(current_player.agent, ScriptedAgents.RandomAgent):
+                raise Exception("Something went wrong. A randomagent choose an illegal action...")
             action = Agents.get_random_action(mask=mask)
 
         # If a player passes, give to turn to the other player
@@ -330,8 +357,8 @@ class Board:
             gi = math.floor((action - 1) / 2)
             if building == 1:
                 current_player.villages.append(gi)  # Indicate for the player itself that we build a village on this gp
-                self.gridpoints[gi].building = current_player.ID  # Actually build it
                 reward += 1
+                self.gridpoints[gi].building = current_player.ID  # Actually build it
                 if len(current_player.villages) > 1:
                     current_player.resources[0] -= 1
                     current_player.resources[1] -= 1
@@ -374,14 +401,28 @@ class Board:
             tile.reset()
 
 
-env = Board(agent1=AGENTS[0], agent2=AGENTS[1])
+run_id = 14
+ct = time.localtime(time.time())
+log_name = "Simplified\\Log-" + str(run_id) + " @ " + str(ct.tm_mday) + "-" + str(ct.tm_mon) + "-" + str(ct.tm_year) + " " + str(ct.tm_hour) + "-" + \
+           str(ct.tm_min) + "-" + str(ct.tm_sec) + ".txt"
+log = open(file=log_name, mode="w+")
+log.write("Time,Episode,Steps,Steps-RA,Steps-SA,ActorLoss,ActorLoss-RA,ActorLoss-SA,CriticLoss,CriticLoss-RA,CriticLoss-SA,"
+          "AgentAC_reward,Reward-RA,Reward-SA,AgentAC_Win,Wins-RA,Wins-SA,Agent0_reward\n")
+log.close()
 
-max_episodes = 1000
-max_steps = 300
+env = Board(agent1=AGENTS[0], agent2=AGENTS[1], auto_reward_per_step=-0.05, winning_reward=10, losing_reward=0)
+
+max_episodes = 100000
+max_steps = 400
 
 total_time = 0
-total_steps = 0
+steps_list = []
 total_turns = 0
+actor_losses = []
+critic_losses = []
+rewards = []
+wins = []
+
 for episode in range(max_episodes):
     start_time = time.time()
     # print("Starting episode", episode)
@@ -399,21 +440,66 @@ for episode in range(max_episodes):
             total_turns += 1
         if steps >= max_steps:
             done = True
+            wins.append(0)
+        # If we are done in a normal fashion...
+        elif done:
+            if env.current_player == 0:
+                wins.append(1)
+            else:
+                wins.append(0)
+
+            for agent in AGENTS:
+                # If we are not the agent currently in play, we have apparently lost...
+                if agent.agent_id != env.current_player:
+                    agent.rewards[-1] += env.losing_reward
+                    agent.reward += env.losing_reward
+                if not agent.dones[-1]:
+                    agent.dones[-1] = True
 
         for agent in AGENTS:
-            agent.remember3(state=obs, action=action, reward=reward, new_state=next_obs, done=done)
+            if agent.agent_id == env.current_player:
+                agent.remember(state=obs, action=action, reward=reward, new_state=next_obs, done=done)
 
     duration = round(time.time() - start_time, 2)
     print("Episode", episode, "done in", duration, "sec. and", steps, "steps. Result:",
           str([(p.ID, p.agent.reward) for p in env.players]))
     total_time += duration
-    total_steps += steps
+    steps_list.append(steps)
+    rewards.append(AGENTS[0].reward)
 
     for agent in AGENTS:
-        if agent.getType() == "ActorCritic":
+        if isinstance(agent, colonybot.ActorCritic) or isinstance(agent, Agents.ActorCritic):
             ah, ch = agent.learn()
+            actor_loss = ah.history['loss'][0]
+            critic_loss = ch.history['loss'][0]
+            actor_losses.append(actor_loss)
+            critic_losses.append(critic_loss)
+            log = open(file=log_name, mode='a')
+
+            log_string = str(time.time()) + "," \
+                         + str(episode) + "," \
+                         + str(steps) + "," \
+                         + str(sum(steps_list) / (episode + 1)) + "," \
+                         + str(SlidingAverage1000(steps_list)) + "," \
+                         + str(actor_loss) + "," \
+                         + str(sum(actor_losses) / (episode + 1)) + "," \
+                         + str(SlidingAverage1000(actor_losses)) + "," \
+                         + str(critic_loss) + "," \
+                         + str(sum(critic_losses) / (episode + 1)) + "," \
+                         + str(SlidingAverage1000(critic_losses)) + "," \
+                         + str(AGENTS[0].reward) + "," \
+                         + str(sum(rewards) / (episode + 1)) + "," \
+                         + str(SlidingAverage1000(rewards)) + "," \
+                         + str(int(env.current_player == 0)) + "," \
+                         + str(sum(wins) / (episode + 1)) + "," \
+                         + str(SlidingAverage1000(wins)) + "," \
+                         + str(AGENTS[1].reward)
+            log.write(log_string + "\n")
+            log.close()
+            agent.save(folder="Simplified", id=10)
+
 
 print("Completed", max_episodes, "episodes. Elapsed :", str(round(total_time)),
-      "sec. (avg", str(round(total_time / max_episodes, 3)), "p.e.). Total steps:", total_steps, "(avg",
-      str(round(total_steps / max_episodes)), "p.e.). Turns:", total_turns, "/", str(total_turns/2), "Rounds (avg",
+      "sec. (avg", str(round(total_time / max_episodes, 3)), "p.e.). Total steps:", sum(steps_list), "(avg",
+      str(round(sum(steps_list) / max_episodes)), "p.e.). Turns:", total_turns, "/", str(total_turns/2), "Rounds (avg",
       str(round(total_turns / max_episodes, 3)), "p.e.)")

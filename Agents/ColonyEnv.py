@@ -117,6 +117,6 @@ for episode in range(MAX_EPISODES):
                  + str(AGENTS[2].reward)
     log.write(log_string + "\n")
     log.close()
-    agent.save()
+    agent.save(folder="Simplified")
 
 env.close()

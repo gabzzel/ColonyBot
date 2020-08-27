@@ -3,7 +3,7 @@ import math
 import numpy as np
 from keras.models import Model
 from keras.layers import Dense, Input
-from keras.optimizers import Adam
+from keras.optimizers import Adam, SGD, RMSprop
 from tensorflow.python.keras.models import load_model
 import time
 
@@ -39,15 +39,14 @@ class Agent:
     def choose_action(self, obs, mask) -> np.array:
         raise Exception("Do not call choose_action on Agent class directly!")
 
-    def remember3(self, state, action, reward, new_state, done):
+    def remember(self, state, action, reward, new_state, done):
         self.states.append(state)
         self.actions.append(action)
         self.rewards.append(reward)
         self.new_states.append(new_state)
         self.dones.append(done)
 
-
-    def remember(self, state, action, reward, done):
+    def remember_(self, state, action, reward, done):
 
         if done:
             self.new_states.append(state)
@@ -156,7 +155,7 @@ class RandomAgent(Agent):
 
 
 class ActorCritic(Agent):
-    def __init__(self, agent_id, action_shape, obs_shape, alpha=0.001, beta=0.0001, gamma=0.99):
+    def __init__(self, agent_id, action_shape, obs_shape, alpha=0.001, beta=0.001, gamma=0.99):
         super(ActorCritic, self).__init__(agent_id, action_shape, obs_shape)
         self.alpha = alpha
         self.beta = beta
@@ -166,17 +165,17 @@ class ActorCritic(Agent):
     def build_actor_critic_network(self):
         input = Input(shape=self.obs_shape)
         delta = Input([1])
-        dense1 = Dense(125, activation='relu')(input)
-        #dense2 = Dense(300, activation='relu')(dense1)
-        #dense3 = Dense(300, activation='relu')(dense2)
-        last = Dense(75, activation='relu')(dense1)
+        dense1 = Dense(300, activation='relu')(input)
+        dense2 = Dense(200, activation='relu')(dense1)
+        dense3 = Dense(150, activation='relu')(dense2)
+        last = Dense(75, activation='relu')(dense3)
         probs = Dense(self.action_shape[0], activation='softmax')(last)
         values = Dense(1, activation='linear')(last)
 
         actor = Model(inputs=input, outputs=probs)
-        actor.compile(optimizer=Adam(lr=self.alpha), loss='mean_squared_error')
+        actor.compile(optimizer=RMSprop(lr=self.alpha), loss='mean_squared_error')
         critic = Model(inputs=input, outputs=values)
-        critic.compile(optimizer=Adam(lr=self.beta), loss='mean_squared_error')
+        critic.compile(optimizer=RMSprop(lr=self.beta), loss='mean_squared_error')
 
         return actor, critic
 
@@ -184,43 +183,66 @@ class ActorCritic(Agent):
         # Compute the gamma-discounted rewards over an episode
         self.gamma = 0.99  # discount rate
         running_add = 0
-        discounted_r = np.zeros_like(reward)
+        discounted_r = np.zeros_like(reward, dtype=np.float)
         for i in reversed(range(0, len(reward))):
             if reward[i] != 0:  # reset the sum, since this was a game boundary (pong specific!)
                 running_add = 0
             running_add = running_add * self.gamma + reward[i]
             discounted_r[i] = running_add
 
-        discounted_r -= np.mean(discounted_r)  # normalizing the result
-        discounted_r /= np.std(discounted_r)  # divide by standard deviation
+        # discounted_r -= np.mean(discounted_r)  # normalizing the result
+        mean = np.mean(discounted_r)
+        mean = -1 * mean if not np.isnan(mean).any() else 0
+        discounted_r = np.add(discounted_r, mean)
+        std = np.std(discounted_r)
+        if np.isnan(std).any() or std == 0:
+            std = 1
+        discounted_r /= std  # divide by standard deviation
         return discounted_r
 
     def choose_action(self, obs, mask) -> np.array:
+        # If we can only pass, return pass
+        if sum(mask) == len(mask) - 1:
+            return 0
         state = obs[np.newaxis, :]
+        if np.isnan(state).any():
+            print(state)
         probabilities = self.actor.predict(state)[0]
-        # for i in range(len(probabilities)):
-        #    if mask[i]:
-        #        probabilities[i] = 0.0
+        for i in range(len(probabilities)):
+            if mask[i]:
+                probabilities[i] = 0.0
 
-        # s = sum(probabilities)
-        # if s == 0.0 or s == 0:
-        #    return 0
+        s = sum(probabilities)
+        if s == 0.0 or s == 0:
+            return 0
 
-        # for i in range(len(probabilities)):
-        #    if math.isnan(probabilities[i]):
-        #        probabilities[i] = 0.0
+        for i in range(len(probabilities)):
+            if math.isnan(probabilities[i]):
+                probabilities[i] = 0.0
 
-        # norm_probs = [p / s for p in probabilities]
+        probabilities = [p / s for p in probabilities]
+        if np.isnan(probabilities).any():
+            raise Exception("Probabilities are not summed to 1 .")
+        elif abs(sum(probabilities) - 1) > 0.00001:
+            raise Exception("Sum of probabilities is", sum(probabilities), ", expected sum of 1")
         action = np.random.choice(self.action_space, p=probabilities)
         return action
 
-    def load(self):
-        self.actor = load_model('actor', compile=False)
-        self.critic = load_model('critic', compile=False)
+    def load(self, id, folder=None):
+        if folder is None:
+            self.actor = load_model('actor', compile=False)
+            self.critic = load_model('critic', compile=False)
+        else:
+            self.actor = load_model(filepath=folder + "\\actor" + id + ".h5", compile=False)
+            self.critic = load_model(filepath=folder + "\\actor" + id + ".h5", compile=False)
 
-    def save(self):
-        self.actor.save('actor.h5')
-        self.critic.save('critic.h5')
+    def save(self, id, folder=None):
+        if folder is None:
+            self.actor.save('actor' + id + '.h5')
+            self.critic.save('critic' + id + '.h5')
+        else:
+            self.actor.save(filepath=folder + "\\" + 'actor' + str(id) + '.h5')
+            self.critic.save(filepath=folder + "\\" + 'critic' + str(id) + '.h5')
 
     def learn(self):
         # reshape memory to appropriate shape for training
