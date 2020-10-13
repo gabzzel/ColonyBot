@@ -7,3 +7,4 @@ Agents/__pycache__/
 Agents\__pycache__\
 Agents/Logs/
 Agents\Logs\
+*\Logs\
